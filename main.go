@@ -13,7 +13,7 @@ func main() {
 
 	//Setup router
 	router := mux.NewRouter()
-	router.Handle("/user", handlers.GetUserHandler())
+	handlers.ConfigUserHandler(router.PathPrefix("/user").Subrouter())
 
 	http.Handle("/", router)
 
