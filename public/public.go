@@ -11,6 +11,8 @@ import (
 
 
 var(
+	MAIN_STORAGE_BUCKET = "nthu-a-plus-storage"
+
 	CONFIG_FILE_NAME string = "config"
 	Config	*viper.Viper
 
@@ -121,5 +123,5 @@ func initDatabases() error {
 }
 func GetNewUserDatabase() *mgo.Database {
 	s := userDbSession.Copy()
-	return s.DB("")
+	return s.DB("users")
 }

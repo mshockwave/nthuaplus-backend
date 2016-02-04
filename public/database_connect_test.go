@@ -1,12 +1,11 @@
-package tests
+package public
 
 import (
 	"testing"
-	"../public"
 )
 
 func TestUserDbConnect(t *testing.T) {
-	userDb := public.GetNewUserDatabase()
+	userDb := GetNewUserDatabase()
 	if userDb == nil {
 		t.Error("UserDb session nil")
 		t.FailNow()

@@ -7,16 +7,11 @@ type User struct {
 	Email	string
 	Username	string
 	FormalId	string
-	Thumbnail	bson.ObjectId //the image's object id
+	Thumbnail	string ""
 
 	AuthInfo	UserAuth
 }
 type UserAuth struct {
 	BcryptCost	int
 	BcyptHash	string
-}
-
-type Object struct {
-	Id	bson.ObjectId `bson:"_id,omitempty"`
-	Bucket	string
 }

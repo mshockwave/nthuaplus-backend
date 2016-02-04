@@ -3,6 +3,8 @@ package public
 import (
 	"net/http"
 	"encoding/json"
+	"strings"
+	"gopkg.in/mgo.v2/bson"
 )
 
 func ResponseAsJson(resp http.ResponseWriter, value interface{}) (int, error){
@@ -104,7 +106,7 @@ func FormalIdVerifier(str string) bool {
 			if num1 < 0 {return false}
 			num1 = (num1 % 10) * 9 + (num1 / 10)
 		}else{
-			var v int = ch - '0'
+			var v int = int(ch) - int('0')
 			if i < 8 {
 				num2 += (9 - i) * v
 			}else{
@@ -115,3 +117,7 @@ func FormalIdVerifier(str string) bool {
 
 	return ((num1 + num2) % 10) == 0
 }
+
+func StringJoin(sep string, elements ...string) string{ return strings.Join(elements, sep) }
+
+func NewHashString() string { return bson.NewObjectId().Hex() }
