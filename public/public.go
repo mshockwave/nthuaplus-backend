@@ -7,11 +7,17 @@ import (
 	"os"
 	"log"
 	"io/ioutil"
+	"github.com/gorilla/sessions"
 )
 
+const(
+	MAIN_STORAGE_BUCKET = "nthu-a-plus-storage"
+
+	USER_AUTH_SESSION = "user-auth"
+	USER_ID_SESSION_KEY = "user_id"
+)
 
 var(
-	MAIN_STORAGE_BUCKET = "nthu-a-plus-storage"
 
 	CONFIG_FILE_NAME string = "config"
 	Config	*viper.Viper
@@ -26,6 +32,9 @@ var(
 	LogD	*log.Logger
 	LogE	*log.Logger
 	LogW	*log.Logger
+
+	//Session
+	SessionStorage *sessions.CookieStore
 )
 
 func init(){
@@ -39,6 +48,8 @@ func init(){
 	if e := initDatabases(); e != nil {
 		panic(e)
 	}
+
+	initSession()
 }
 
 func setDefaultValues(){
@@ -124,4 +135,9 @@ func initDatabases() error {
 func GetNewUserDatabase() *mgo.Database {
 	s := userDbSession.Copy()
 	return s.DB("users")
+}
+
+func initSession(){
+	SessionStorage = sessions.NewCookieStore([]byte(NewHashString()))
+	SessionStorage.MaxAge(86400 * 3) //3 days
 }

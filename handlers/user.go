@@ -21,7 +21,7 @@ const(
 )
 
 func handleRegister(resp http.ResponseWriter, req *http.Request){
-	email := req.FormValue("email")
+	email := public.EmailFilter(req.FormValue("email"))
 	username := req.FormValue("username")
 	formalId := req.FormValue("formalId")
 	password := req.FormValue("password")
@@ -48,7 +48,7 @@ func handleRegister(resp http.ResponseWriter, req *http.Request){
 			Message: "Error",
 			Description: "Wrong Format: " + strings.Join(errorFields, ","),
 		}
-		public.ResponseAsJson(resp, &r)
+		public.ResponseStatusAsJson(resp, 400, &r)
 	}else{
 		//Get thumbnail if exist
 		var thumb multipart.File = nil
@@ -69,14 +69,14 @@ func handleRegister(resp http.ResponseWriter, req *http.Request){
 					Message: "Error",
 					Description: err.Error(),
 				}
-				public.ResponseAsJson(resp, &r)
+				public.ResponseStatusAsJson(resp, 500, &r)
 			}else{
 				//User exist
 				r := public.SimpleResult{
 					Message: "User Exist",
 					Description: email,
 				}
-				public.ResponseAsJson(resp, &r)
+				public.ResponseStatusAsJson(resp, 400, &r)
 			}
 		}else{
 			newUser := db.User{
@@ -127,23 +127,78 @@ func handleRegister(resp http.ResponseWriter, req *http.Request){
 					Message: "Register Failed",
 					Description: err.Error(),
 				}
-				public.ResponseAsJson(resp, &r)
+				public.ResponseStatusAsJson(resp, 400, &r)
 			}else{
+				if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, newUser.Id.Hex()); err != nil {
+					public.LogE.Printf("Error setting session user id: %s\n", err.Error())
+				}
+
 				r := public.SimpleResult{
 					Message: "Register Successed",
 					Description: email,
 				}
-				public.ResponseAsJson(resp, &r)
+				public.ResponseOkAsJson(resp, &r)
 			}
 		}
 	}
 }
 
 func handleLogin(resp http.ResponseWriter, req *http.Request){
-	r := public.SimpleResult{
-		Message: "This is login",
+	email := public.EmailFilter(req.FormValue("email"))
+	password := req.FormValue("password")
+
+	if len(email) <= 0 || len(password) <= 0 {
+		r := public.SimpleResult{
+			Message: "Error",
+			Description: "Incorrect email or password",
+		}
+		public.ResponseStatusAsJson(resp, 403, &r)
+		return
 	}
-	public.ResponseAsJson(resp, &r)
+
+	//Check login status
+	if v, _ := public.GetSessionValue(req, public.USER_ID_SESSION_KEY); v != nil {
+		r := public.SimpleResult{
+			Message: "Error",
+			Description: "Already Login",
+		}
+		public.ResponseStatusAsJson(resp, 400, &r)
+		return
+	}
+
+	userDb := public.GetNewUserDatabase()
+	defer userDb.Session.Close()
+
+	profiles := userDb.C(USER_DB_PROFILE_COLLECTION)
+	q := profiles.Find( bson.M{"email": email} )
+	user := db.User{}
+	if q.One(&user) == nil {
+		//Check password
+		if bcrypt.CompareHashAndPassword([]byte(user.AuthInfo.BcyptHash), []byte(password)) != nil {
+			r := public.SimpleResult{
+				Message: "Error",
+				Description: "Incorrect email or password",
+			}
+			public.ResponseStatusAsJson(resp, 403, &r)
+			return
+		}
+
+		if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, user.Id.Hex()); err != nil {
+			public.LogE.Printf("Error setting session user id: %s\n", err.Error())
+		}
+		r := public.SimpleResult{
+			Message: "Login Successed",
+			Description: email,
+		}
+		public.ResponseOkAsJson(resp, &r)
+	}else{
+		r := public.SimpleResult{
+			Message: "Error",
+			Description: "Incorrect email or password",
+		}
+		public.ResponseStatusAsJson(resp, 403, &r)
+		return
+	}
 }
 
 func ConfigUserHandler(router *mux.Router){

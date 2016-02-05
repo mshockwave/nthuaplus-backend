@@ -7,14 +7,18 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-func ResponseAsJson(resp http.ResponseWriter, value interface{}) (int, error){
+func ResponseOkAsJson(resp http.ResponseWriter, value interface{}) (int, error){
+	return ResponseStatusAsJson(resp, 200, value)
+}
+func ResponseStatusAsJson(resp http.ResponseWriter, status int, value interface{}) (int, error){
 	if j_bytes, err := json.Marshal(value); err != nil {
 		resp.WriteHeader(500)
 		return 500, err
 	}else{
 		resp.Header().Set("Content-Type", "application/json; charset=utf-8")
+		resp.WriteHeader(status)
 		_, err = resp.Write(j_bytes)
-		return 200, err
+		return status, err
 	}
 }
 
@@ -118,6 +122,22 @@ func FormalIdVerifier(str string) bool {
 	return ((num1 + num2) % 10) == 0
 }
 
+func EmailFilter(orig string) string { return strings.Replace(orig, "%40", "@", -1) }
+
 func StringJoin(sep string, elements ...string) string{ return strings.Join(elements, sep) }
 
 func NewHashString() string { return bson.NewObjectId().Hex() }
+
+func GetSessionValue(req *http.Request, key interface{}) (interface{}, error) {
+	s, err := SessionStorage.Get(req, USER_AUTH_SESSION)
+	if err != nil { return nil, err }
+
+	return s.Values[key], nil
+}
+func SetSessionValue(req *http.Request, resp http.ResponseWriter, key, value interface{}) error {
+	s, err := SessionStorage.Get(req, USER_AUTH_SESSION)
+	if err != nil { return err }
+
+	s.Values[key] = value
+	return s.Save(req, resp)
+}
