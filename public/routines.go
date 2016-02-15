@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
+	"github.com/wendal/errors"
 )
 
 func ResponseOkAsJson(resp http.ResponseWriter, value interface{}) (int, error){
@@ -135,9 +136,40 @@ func GetSessionValue(req *http.Request, key interface{}) (interface{}, error) {
 	return s.Values[key], nil
 }
 func SetSessionValue(req *http.Request, resp http.ResponseWriter, key, value interface{}) error {
-	s, err := SessionStorage.Get(req, USER_AUTH_SESSION)
-	if err != nil { return err }
+	s, _ := SessionStorage.Get(req, USER_AUTH_SESSION)
+	if s == nil { return errors.New("Session " + USER_AUTH_SESSION + " not available") }
 
 	s.Values[key] = value
 	return s.Save(req, resp)
+}
+
+func GetSessionUserId(req *http.Request) (bson.ObjectId, error){
+	if v, err := GetSessionValue(req, USER_ID_SESSION_KEY); err != nil || v == nil{
+		return bson.ObjectId(""), errors.New("Invalid session id format")
+	}else{
+		if str, found := v.(string); found {
+			if bson.IsObjectIdHex(str) {
+				return bson.ObjectIdHex(str), nil
+			}else{
+				return bson.ObjectId(""), errors.New("Invalid session id format")
+			}
+		}else{
+			return bson.ObjectId(""), errors.New("Invalid session id format")
+		}
+	}
+}
+
+func AuthVerifierWrapper(handler http.HandlerFunc) http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request){
+		if _, err := GetSessionUserId(req); err != nil {
+			r := SimpleResult{
+				Message: "Error",
+				Description: "Please Login First",
+			}
+			ResponseStatusAsJson(resp, 403, &r)
+			return
+		}
+
+		handler(resp, req)
+	}
 }

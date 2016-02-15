@@ -15,6 +15,7 @@ func main() {
 	//Setup router
 	router := mux.NewRouter()
 	handlers.ConfigUserHandler(router.PathPrefix("/user").Subrouter())
+	handlers.ConfigFormHandler(router.PathPrefix("/form").Subrouter())
 
 	http.Handle("/", router)
 

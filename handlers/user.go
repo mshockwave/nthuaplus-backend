@@ -157,7 +157,7 @@ func handleLogin(resp http.ResponseWriter, req *http.Request){
 	}
 
 	//Check login status
-	if v, _ := public.GetSessionValue(req, public.USER_ID_SESSION_KEY); v != nil {
+	if _, err := public.GetSessionUserId(req); err == nil {
 		r := public.SimpleResult{
 			Message: "Error",
 			Description: "Already Login",
@@ -201,7 +201,52 @@ func handleLogin(resp http.ResponseWriter, req *http.Request){
 	}
 }
 
+func handleLogout(resp http.ResponseWriter, req *http.Request){
+	if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, nil); err != nil {
+		public.LogE.Printf("Logout Failed: %s\n", err.Error())
+		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
+			Message: "Error",
+			Description: "Logout Failed",
+		})
+	}else{
+		public.ResponseOkAsJson(resp, &public.SimpleResult{
+			Message: "Logout Success",
+		})
+	}
+}
+
+func handleProfile(resp http.ResponseWriter, req *http.Request){
+	userId,_ := public.GetSessionUserId(req)
+
+	userDb := public.GetNewUserDatabase()
+	defer userDb.Session.Close()
+
+	profile := userDb.C(USER_DB_PROFILE_COLLECTION)
+
+	q := profile.FindId(userId)
+	if c, err := q.Count(); c == 0 || err != nil{
+		r := public.SimpleResult{
+			Message: "Error",
+			Description: "User Not Found",
+		}
+		public.ResponseStatusAsJson(resp, 500, &r)
+	}else{
+		user := db.User{}
+		q.One(&user)
+
+		r := public.UserProfile{
+			Email: user.Email,
+			Username: user.Username,
+			FormalId: user.FormalId,
+		}
+		public.ResponseOkAsJson(resp, &r)
+	}
+}
+
 func ConfigUserHandler(router *mux.Router){
 	router.HandleFunc("/register", handleRegister)
 	router.HandleFunc("/login", handleLogin)
+	router.HandleFunc("/logout", public.AuthVerifierWrapper(handleLogout))
+
+	router.HandleFunc("/profile", public.AuthVerifierWrapper(handleProfile))
 }
