@@ -17,6 +17,10 @@ import (
 	"mime"
 )
 
+
+const(
+	APPLICATION_DB_FORM_COLLECTION = "forms"
+)
 var(
 	TOPICS = []string{"topic1", "topic2", "topic3"}
 )
@@ -40,6 +44,7 @@ func handleSubmit(resp http.ResponseWriter, req *http.Request){
 	}
 
 	if topic, err := parseTopic(req); err != nil {
+		public.LogE.Println(err.Error())
 		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
 			Message: "Error",
 			Description: "Wrong form format",
@@ -48,23 +53,215 @@ func handleSubmit(resp http.ResponseWriter, req *http.Request){
 	}else{
 		form.Topic = topic
 	}
+
+	if grade, err := parseSchoolGrade(req); err != nil{
+		public.LogE.Println(err.Error())
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong form format",
+		})
+		return
+	}else{
+		form.SchoolGrade = grade
+	}
+
+	if birthday, err := parseBirthday(req); err != nil{
+		public.LogE.Println(err.Error())
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong form format",
+		})
+		return
+	}else{
+		form.Birthday = birthday
+	}
+
+	if classes, err := parseStudiedClasses(req); err != nil{
+		public.LogE.Println(err.Error())
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong form format",
+		})
+		return
+	}else{
+		form.ClassHistories = classes
+	}
+
+	if languages, err := parseLanguageAbility(req); err != nil{
+		public.LogE.Println(err.Error())
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong form format",
+		})
+		return
+	}else{
+		form.LangAbilities = languages
+	}
+
+	if average, ranking, err := parseAcademicGrades(req); err != nil {
+		public.LogE.Println(err.Error())
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong form format",
+		})
+		return
+	}else{
+		form.AcademicGrade = db.AcademicGrade{
+			Average: average,
+			Rank: ranking,
+		}
+	}
+
+	var planFile, letterFile, transcriptFile, otherFile multipart.File
+	var planHeader, letterHeader, transcriptHeader, otherHeader *multipart.FileHeader
+	var err error
+
+	if planFile, planHeader, err = req.FormFile("researchPlan"); err != nil || planFile == nil {
+		public.LogE.Println(err.Error())
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong form format",
+		})
+		return
+	}
+	if letterFile, letterHeader, err = req.FormFile("recommendationLetters"); err != nil || letterFile == nil {
+		public.LogE.Println(err.Error())
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong form format",
+		})
+		return
+	}
+	if transcriptFile, transcriptHeader, err = req.FormFile("transcript"); err != nil || transcriptFile == nil {
+		public.LogE.Println(err.Error())
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong form format",
+		})
+		return
+	}
+
+	planChan := make(chan string)
+	letterChan := make(chan string)
+	transcriptChan := make(chan string)
+
+	go func(c chan string){
+		if obj, err := saveFile(planHeader, planFile); err != nil {
+			public.LogE.Printf("Write file error: %s\n" + err.Error())
+			c <- ""
+			close(c)
+		}else{
+			c <- obj
+			close(c)
+		}
+	}(planChan)
+	go func(c chan string){
+		if obj, err := saveFile(letterHeader, letterFile); err != nil {
+			public.LogE.Printf("Write file error: %s\n" + err.Error())
+			c <- ""
+			close(c)
+		}else{
+			c <- obj
+			close(c)
+		}
+	}(letterChan)
+	go func(c chan string){
+		if obj, err := saveFile(transcriptHeader, transcriptFile); err != nil {
+			public.LogE.Printf("Write file error: %s\n" + err.Error())
+			c <- ""
+			close(c)
+		}else{
+			c <- obj
+			close(c)
+		}
+	}(transcriptChan)
+
+	if otherFile, otherHeader, err = req.FormFile("others"); err == nil && otherFile != nil {
+		otherChan := make(chan string)
+		go func(c chan string){
+			if obj, err := saveFile(otherHeader, otherFile); err != nil {
+				public.LogE.Printf("Write file error: %s\n" + err.Error())
+				c <- ""
+				close(c)
+			}else{
+				c <- obj
+				close(c)
+			}
+		}(otherChan)
+
+		counter := 0
+		var planObj, letterObj, transcriptObj, otherObj string
+		for counter < 4 {
+			select {
+			case planObj = <- planChan:
+				form.ResearchPlan = planObj
+				counter++
+
+			case letterObj = <- letterChan:
+				form.Recommendations = letterObj
+				counter++
+
+			case transcriptObj = <- transcriptChan:
+				form.Transcript = transcriptObj
+				counter++
+
+			case otherObj = <- otherChan:
+				form.Others = otherObj
+				counter++
+			}
+		}
+	}else{
+		counter := 0
+		var planObj, letterObj, transcriptObj string
+		for counter < 3 {
+			select {
+			case planObj = <- planChan:
+				form.ResearchPlan = planObj
+				counter++
+
+			case letterObj = <- letterChan:
+				form.Recommendations = letterObj
+				counter++
+
+			case transcriptObj = <- transcriptChan:
+				form.Transcript = transcriptObj
+				counter++
+			}
+		}
+	}
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	forms := appDb.C(APPLICATION_DB_FORM_COLLECTION)
+	if err := forms.Insert(&form); err != nil {
+		public.LogE.Printf("Insert new form error: " + err.Error())
+		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
+			Message: "Error",
+			Description: "Add Form Error",
+		})
+	}else{
+		public.ResponseOkAsJson(resp, &public.SimpleResult{
+			Message: "Success",
+		})
+	}
 }
 func parseTopic(req *http.Request) (uint, error){
 	for i,v := range TOPICS {
 		if len(req.FormValue(v)) == 0 {
 			continue
 		}
-		return i,nil
+		return uint(i),nil
 	}
-	return -1, errors.New("Not Found")
+	return 1, errors.New("Not Found")
 }
 func parseSchoolGrade(req *http.Request) (string,error) {
 	gradeType := req.FormValue("gradeType")
 	schoolGrade := req.FormValue("schoolGrade")
 
-	numGrade := int(schoolGrade)
-	if numGrade < 0 {
-		return "", errors.New("Negative Grade")
+	var numGrade int
+	if n,_ := fmt.Sscanf(schoolGrade, "%d", &numGrade); n < 1 || numGrade < 0{
+		return "", errors.New("Invalid Grade")
 	}
 
 	return fmt.Sprintf("%s@%d", gradeType, schoolGrade), nil
@@ -90,7 +287,7 @@ func parseStudiedClasses(req *http.Request) ([]db.StudiedClass, error) {
 		if e := decoder.Decode(&element); e != nil {
 			continue
 		}
-		append(classes, element)
+		classes = append(classes, element)
 	}
 
 	decoder.Token() //The last array bracket
@@ -134,7 +331,7 @@ func parseLanguageAbility(req *http.Request) ([]db.LanguageAbility,error) {
 			Reading: uint(element.Abilities[2].Value),
 			Writing: uint(element.Abilities[3].Value),
 		}
-		append(languages, lang)
+		languages = append(languages, lang)
 	}
 
 	decoder.Token() //The last array bracket
@@ -157,7 +354,7 @@ func parseAcademicGrades(req *http.Request) (db.GradeType, db.RankType, error){
 func saveFile(header *multipart.FileHeader, r io.Reader) (string, error) {
 	if client, err := storage.GetNewStorageClient(); err == nil {
 		h := public.NewHashString()
-		objName := storage.PathJoin(storage.THUMBNAILS_FOLDER_NAME, h)
+		objName := storage.PathJoin(storage.APPLICATIONS_FOLDER_NAME, h)
 		//Determine the extension
 		var ext string = ""
 		if header != nil {

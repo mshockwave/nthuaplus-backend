@@ -22,35 +22,35 @@ type UserAuth struct {
 type GradeType float64
 type RankType	uint32
 type ApplicationForm struct {
-	Id		bson.ObjectId `bson:"_id,omitempty"`
-	OwnerId		bson.ObjectId
-	Timestamp	time.Time
+	Id              bson.ObjectId `bson:"_id,omitempty"`
+	OwnerId         bson.ObjectId
+	Timestamp       time.Time
 
-	//Basic Data
-	Name		string
-	School		string
-	Department	string
-	SchoolGrade	string
-	Birthday	time.Time
-	FormalId	string
-	Phone		string
-	Email		string
-	Address		string
+			       //Basic Data
+	Name            string
+	School          string
+	Department      string
+	SchoolGrade     string
+	Birthday        time.Time
+	FormalId        string
+	Phone           string
+	Email           string
+	Address         string
 
-	//Academic Data
-	Topic		uint
-	Teacher		string
-	ResearchArea	string
-	ClassHistories	[]StudiedClass
-	RelatedSkills	string
-	AcademicGrade	AcademicGrade
-	LangAbilities	[]LanguageAbility
+			       //Academic Data
+	Topic           uint
+	Teacher         string
+	ResearchArea    string
+	ClassHistories  []StudiedClass
+	RelatedSkills   string
+	AcademicGrade   AcademicGrade
+	LangAbilities   []LanguageAbility
 
-	//Extras
-	ResearchPlan	string //File
-	Recommendations	string //File
-	GradeSheet	string //File
-	Others		string //File
+			       //Extras
+	ResearchPlan    string //File
+	Recommendations string //File
+	Transcript      string //File
+	Others          string //File
 }
 type StudiedClass struct {
 	Name		string

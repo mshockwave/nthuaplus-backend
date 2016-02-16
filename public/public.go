@@ -26,6 +26,7 @@ var(
 
 	mainDbSession *mgo.Session
 	userDbSession *mgo.Session
+	applicationDbSession *mgo.Session
 
 	//Loggers
 	LogV	*log.Logger
@@ -130,11 +131,27 @@ func initDatabases() error {
 		return err
 	}
 
+	//Init application session
+	applicationDbSession = mainDbSession.Copy()
+	err = applicationDbSession.Login(&mgo.Credential{
+		Username: username,
+		Password: password,
+		Source: "users",
+	})
+	if err != nil {
+		LogE.Println("Application database login failed: " + err.Error())
+		return err
+	}
+
 	return nil
 }
 func GetNewUserDatabase() *mgo.Database {
 	s := userDbSession.Copy()
 	return s.DB("users")
+}
+func GetNewApplicationDatabase() *mgo.Database {
+	s := applicationDbSession.Copy()
+	return s.DB("applications")
 }
 
 func initSession(){
