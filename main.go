@@ -8,6 +8,7 @@ import (
 	"./public"
 	"fmt"
 	"github.com/gorilla/context"
+	goHandlers "github.com/gorilla/handlers"
 )
 
 func main() {
@@ -19,9 +20,17 @@ func main() {
 
 	http.Handle("/", router)
 
+	//Setup CORS Options
+	origins := make([]string, 1)
+	origins[0] = "*"
+	allowOrigins := goHandlers.AllowedOrigins(origins)
+
 	addrStr := fmt.Sprintf("%s:%d",
 		public.Config.GetString("server.address"),
 		public.Config.GetInt("server.port"))
 	public.LogV.Printf("Listen address: %s\n", addrStr)
-	public.LogE.Fatal(http.ListenAndServe(addrStr, context.ClearHandler(http.DefaultServeMux)))
+	public.LogE.Fatal(http.ListenAndServe(
+		addrStr,
+		context.ClearHandler(goHandlers.CORS(allowOrigins)(http.DefaultServeMux)),
+	))
 }

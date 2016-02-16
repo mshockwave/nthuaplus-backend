@@ -73,8 +73,8 @@ func handleRegister(resp http.ResponseWriter, req *http.Request){
 			}else{
 				//User exist
 				r := public.SimpleResult{
-					Message: "User Exist",
-					Description: email,
+					Message: "Error",
+					Description: "User Exists",
 				}
 				public.ResponseStatusAsJson(resp, 400, &r)
 			}
@@ -159,10 +159,10 @@ func handleLogin(resp http.ResponseWriter, req *http.Request){
 	//Check login status
 	if _, err := public.GetSessionUserId(req); err == nil {
 		r := public.SimpleResult{
-			Message: "Error",
-			Description: "Already Login",
+			Message: "Already Login",
+			Description: email,
 		}
-		public.ResponseStatusAsJson(resp, 400, &r)
+		public.ResponseOkAsJson(resp, &r)
 		return
 	}
 

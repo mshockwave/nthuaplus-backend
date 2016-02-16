@@ -136,6 +136,8 @@ func GetSessionValue(req *http.Request, key interface{}) (interface{}, error) {
 	return s.Values[key], nil
 }
 func SetSessionValue(req *http.Request, resp http.ResponseWriter, key, value interface{}) error {
+	//Ignore the error since sometimes the browser side coolie storage is broken
+	//But we still can assign new cookies
 	s, _ := SessionStorage.Get(req, USER_AUTH_SESSION)
 	if s == nil { return errors.New("Session " + USER_AUTH_SESSION + " not available") }
 

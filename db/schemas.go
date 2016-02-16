@@ -1,6 +1,9 @@
 package db
 
-import "gopkg.in/mgo.v2/bson"
+import (
+	"gopkg.in/mgo.v2/bson"
+	"time"
+)
 
 type User struct {
 	Id	bson.ObjectId `bson:"_id,omitempty"`
@@ -14,4 +17,57 @@ type User struct {
 type UserAuth struct {
 	BcryptCost	int
 	BcyptHash	string
+}
+
+type GradeType float64
+type RankType	int32
+type ApplicationForm struct {
+	Id		bson.ObjectId `bson:"_id,omitempty"`
+	OwnerId		bson.ObjectId
+	Timestamp	time.Time
+
+	//Basic Data
+	Name		string
+	School		string
+	Department	string
+	SchoolGrade	string
+	Birthday	time.Time
+	FormalId	string
+	Phone		string
+	Email		string
+	Address		string
+
+	//Academic Data
+	Topic		uint
+	ResearchArea	string
+	ClassHistories	[]StudiedClass
+	RelatedSkills	string
+	AcademicGrade	AcademicGrade
+	LangAbilities	[]LanguageAbility
+
+	//Extras
+	ResearchPlan	string //File
+	Recommendations	string //File
+	GradeSheet	string //File
+	Others		string //File
+}
+type StudiedClass struct {
+	Name		string
+	Semester	string
+	Grade		GradeType
+}
+type AcademicGrade struct {
+	Average		GradeType
+	Rank		RankType
+}
+type LanguageAbility struct{
+	Name		string
+
+	//Good: 0
+	//Average: 1
+	//Bad: 2
+	Listening	uint
+	Speaking	uint
+	Reading		uint
+	Writing		uint
 }
