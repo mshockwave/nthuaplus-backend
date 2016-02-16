@@ -20,7 +20,7 @@ type UserAuth struct {
 }
 
 type GradeType float64
-type RankType	int32
+type RankType	uint32
 type ApplicationForm struct {
 	Id		bson.ObjectId `bson:"_id,omitempty"`
 	OwnerId		bson.ObjectId
@@ -39,6 +39,7 @@ type ApplicationForm struct {
 
 	//Academic Data
 	Topic		uint
+	Teacher		string
 	ResearchArea	string
 	ClassHistories	[]StudiedClass
 	RelatedSkills	string
@@ -54,7 +55,7 @@ type ApplicationForm struct {
 type StudiedClass struct {
 	Name		string
 	Semester	string
-	Grade		GradeType
+	Grade		string
 }
 type AcademicGrade struct {
 	Average		GradeType
