@@ -15,6 +15,7 @@ import (
 	"io"
 	"mime/multipart"
 	"mime"
+	"gopkg.in/mgo.v2/bson"
 )
 
 
@@ -294,7 +295,72 @@ func saveFile(header *multipart.FileHeader, r io.Reader) (string, error) {
 	}
 }
 
+func handleView(resp http.ResponseWriter, req *http.Request) {
+	userId,_ := public.GetSessionUserId(req)
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	forms := appDb.C(APPLICATION_DB_FORM_COLLECTION)
+	q := forms.Find(bson.M{
+		"ownerid": userId,
+	})
+	if _, e := q.Count(); e != nil {
+		public.LogE.Println("Query user form error: " + e.Error());
+		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
+			Message: "Error",
+		})
+	}else{
+		if client, err := storage.GetNewStorageClient(); err == nil {
+			defer client.Close()
+			var formResults []db.ApplicationForm
+			form := db.ApplicationForm{}
+
+			it := q.Iter()
+			expireTime := time.Now().Add(time.Duration(1) * time.Hour) //an hour
+			for it.Next(&form) {
+				form.Id = bson.ObjectId("")
+				form.OwnerId = bson.ObjectId("")
+
+				//Handle the file objects
+				if obj,e := client.GetNewSignedURL(form.ResearchPlan, expireTime); e == nil {
+					form.ResearchPlan = obj
+				}else{
+					public.LogE.Println("Get object error: " + e.Error())
+				}
+				if obj,e := client.GetNewSignedURL(form.Recommendations, expireTime); e == nil {
+					form.Recommendations = obj
+				}else{
+					public.LogE.Println("Get object error: " + e.Error())
+				}
+				if obj,e := client.GetNewSignedURL(form.Transcript, expireTime); e == nil {
+					form.Transcript = obj
+				}else{
+					public.LogE.Println("Get object error: " + e.Error())
+				}
+				if len(form.Others) > 0 {
+					if obj,e := client.GetNewSignedURL(form.Others, expireTime); e == nil {
+						form.Others = obj
+					}else{
+						public.LogE.Println("Get object error: " + e.Error())
+					}
+				}
+
+				formResults = append(formResults, form)
+			}
+
+			public.ResponseOkAsJson(resp, formResults)
+		}else{
+			public.LogE.Println("Error getting storage client: " + err.Error())
+			public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
+				Message: "Error",
+			})
+		}
+	}
+}
+
 func ConfigFormHandler(router *mux.Router){
 	router.HandleFunc("/submit", public.AuthVerifierWrapper(handleSubmit))
 	router.HandleFunc("/upload", public.AuthVerifierWrapper(handleUploadFile))
+	router.HandleFunc("/view", public.AuthVerifierWrapper(handleView))
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"io/ioutil"
 	"github.com/gorilla/sessions"
+	"github.com/wendal/errors"
 )
 
 const(
@@ -36,6 +37,10 @@ var(
 
 	//Session
 	SessionStorage *sessions.CookieStore
+
+	//Cloud Storage Signed URL
+	StoragePrivateKey []byte
+	StorageServiceAccountEmail string
 )
 
 func init(){
@@ -51,6 +56,8 @@ func init(){
 	}
 
 	initSession()
+
+	initStorage()
 }
 
 func setDefaultValues(){
@@ -157,4 +164,25 @@ func GetNewApplicationDatabase() *mgo.Database {
 func initSession(){
 	SessionStorage = sessions.NewCookieStore([]byte(/*NewHashString()*/"main-session-storage"))
 	SessionStorage.MaxAge(86400 * 3) //3 days
+}
+
+func initStorage(){
+	if !Config.IsSet("storage.serviceAccountEmail") || !Config.IsSet("storage.privateKeyPath") {
+		panic(errors.New("storage.serviceAccountEmail or storage.privateKeyPath not set"))
+	}
+
+	StorageServiceAccountEmail = Config.GetString("storage.serviceAccountEmail")
+	//LogD.Println("Service account: " + StorageServiceAccountEmail)
+
+	privateKeyPath := Config.GetString("storage.privateKeyPath")
+	if file,err := os.Open(privateKeyPath); err != nil {
+		panic(errors.New("storage.privateKeyPath not exist"))
+	}else{
+		defer file.Close()
+		if StoragePrivateKey,err = ioutil.ReadAll(file); err != nil {
+			panic(errors.New("storage.privateKeyPath read file error"))
+		}else{
+			//LogD.Printf("Private key length: %d\n", len(StoragePrivateKey))
+		}
+	}
 }

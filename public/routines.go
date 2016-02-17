@@ -16,9 +16,13 @@ func ResponseStatusAsJson(resp http.ResponseWriter, status int, value interface{
 		resp.WriteHeader(500)
 		return 500, err
 	}else{
+		//Restore '&'
+		str := string(j_bytes)
+		str = strings.Replace(str, `\u0026`, "&", -1)
+
 		resp.Header().Set("Content-Type", "application/json; charset=utf-8")
 		resp.WriteHeader(status)
-		_, err = resp.Write(j_bytes)
+		_, err = resp.Write([]byte(str))
 		return status, err
 	}
 }

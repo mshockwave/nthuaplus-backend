@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 
 	"../public"
+	"time"
 )
 
 const(
@@ -64,3 +65,15 @@ func (this *StorageClient) ListDir(dir string) (*storage.ObjectList, error){
 	return bucket.List(this.Ctx, q)
 }
 */
+
+func (this *StorageClient) GetNewSignedURL(name string, expire time.Time) (string, error){
+	opt := storage.SignedURLOptions{
+		GoogleAccessID: public.StorageServiceAccountEmail,
+		PrivateKey: public.StoragePrivateKey,
+		Method: "GET",
+		Expires: expire,
+	}
+	//public.LogD.Printf("AccessID: %v", (&opt).GoogleAccessID)
+	//public.LogD.Printf("PrivateKey: %v", (&opt).PrivateKey)
+	return storage.SignedURL(public.MAIN_STORAGE_BUCKET, name, &opt)
+}
