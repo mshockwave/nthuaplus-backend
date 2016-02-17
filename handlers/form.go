@@ -30,6 +30,7 @@ func handleSubmit(resp http.ResponseWriter, req *http.Request){
 
 	form := db.ApplicationForm{
 		OwnerId: ownerId,
+		Timestamp: time.Now(),
 
 		Name: req.FormValue("name"),
 		School: req.FormValue("school"),
@@ -37,10 +38,16 @@ func handleSubmit(resp http.ResponseWriter, req *http.Request){
 		Email: req.FormValue("email"),
 		Phone: req.FormValue("phoneNumber"),
 		Address: req.FormValue("address"),
+		FormalId: req.FormValue("formalId"), //TODO: Verify
 
 		Teacher: req.FormValue("teacher"),
 		ResearchArea: req.FormValue("researchArea"),
 		RelatedSkills: req.FormValue("relatedSkills"),
+
+		ResearchPlan: req.FormValue("researchPlan"),
+		Recommendations: req.FormValue("recommendationLetters"),
+		Transcript: req.FormValue("transcript"),
+		Others: req.FormValue("others"),
 	}
 
 	if topic, err := parseTopic(req); err != nil {
@@ -112,123 +119,6 @@ func handleSubmit(resp http.ResponseWriter, req *http.Request){
 		}
 	}
 
-	var planFile, letterFile, transcriptFile, otherFile multipart.File
-	var planHeader, letterHeader, transcriptHeader, otherHeader *multipart.FileHeader
-	var err error
-
-	if planFile, planHeader, err = req.FormFile("researchPlan"); err != nil || planFile == nil {
-		public.LogE.Println(err.Error())
-		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
-			Message: "Error",
-			Description: "Wrong form format",
-		})
-		return
-	}
-	if letterFile, letterHeader, err = req.FormFile("recommendationLetters"); err != nil || letterFile == nil {
-		public.LogE.Println(err.Error())
-		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
-			Message: "Error",
-			Description: "Wrong form format",
-		})
-		return
-	}
-	if transcriptFile, transcriptHeader, err = req.FormFile("transcript"); err != nil || transcriptFile == nil {
-		public.LogE.Println(err.Error())
-		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
-			Message: "Error",
-			Description: "Wrong form format",
-		})
-		return
-	}
-
-	planChan := make(chan string)
-	letterChan := make(chan string)
-	transcriptChan := make(chan string)
-
-	go func(c chan string){
-		if obj, err := saveFile(planHeader, planFile); err != nil {
-			public.LogE.Printf("Write file error: %s\n" + err.Error())
-			c <- ""
-			close(c)
-		}else{
-			c <- obj
-			close(c)
-		}
-	}(planChan)
-	go func(c chan string){
-		if obj, err := saveFile(letterHeader, letterFile); err != nil {
-			public.LogE.Printf("Write file error: %s\n" + err.Error())
-			c <- ""
-			close(c)
-		}else{
-			c <- obj
-			close(c)
-		}
-	}(letterChan)
-	go func(c chan string){
-		if obj, err := saveFile(transcriptHeader, transcriptFile); err != nil {
-			public.LogE.Printf("Write file error: %s\n" + err.Error())
-			c <- ""
-			close(c)
-		}else{
-			c <- obj
-			close(c)
-		}
-	}(transcriptChan)
-
-	if otherFile, otherHeader, err = req.FormFile("others"); err == nil && otherFile != nil {
-		otherChan := make(chan string)
-		go func(c chan string){
-			if obj, err := saveFile(otherHeader, otherFile); err != nil {
-				public.LogE.Printf("Write file error: %s\n" + err.Error())
-				c <- ""
-				close(c)
-			}else{
-				c <- obj
-				close(c)
-			}
-		}(otherChan)
-
-		counter := 0
-		var planObj, letterObj, transcriptObj, otherObj string
-		for counter < 4 {
-			select {
-			case planObj = <- planChan:
-				form.ResearchPlan = planObj
-				counter++
-
-			case letterObj = <- letterChan:
-				form.Recommendations = letterObj
-				counter++
-
-			case transcriptObj = <- transcriptChan:
-				form.Transcript = transcriptObj
-				counter++
-
-			case otherObj = <- otherChan:
-				form.Others = otherObj
-				counter++
-			}
-		}
-	}else{
-		counter := 0
-		var planObj, letterObj, transcriptObj string
-		for counter < 3 {
-			select {
-			case planObj = <- planChan:
-				form.ResearchPlan = planObj
-				counter++
-
-			case letterObj = <- letterChan:
-				form.Recommendations = letterObj
-				counter++
-
-			case transcriptObj = <- transcriptChan:
-				form.Transcript = transcriptObj
-				counter++
-			}
-		}
-	}
 
 	appDb := public.GetNewApplicationDatabase()
 	defer appDb.Session.Close()
@@ -264,10 +154,10 @@ func parseSchoolGrade(req *http.Request) (string,error) {
 		return "", errors.New("Invalid Grade")
 	}
 
-	return fmt.Sprintf("%s@%d", gradeType, schoolGrade), nil
+	return fmt.Sprintf("%s@%d", gradeType, numGrade), nil
 }
 func parseBirthday(req *http.Request) (time.Time, error){
-	return time.Parse("1991-01-01", req.FormValue("birthday"))
+	return time.Parse("2006-01-02", req.FormValue("birthday"))
 }
 func parseStudiedClasses(req *http.Request) ([]db.StudiedClass, error) {
 	var classes []db.StudiedClass
@@ -350,6 +240,26 @@ func parseAcademicGrades(req *http.Request) (db.GradeType, db.RankType, error){
 	return db.GradeType(averageNum), db.RankType(rankingNum), nil
 }
 
+func handleUploadFile(resp http.ResponseWriter, req *http.Request) {
+	if f,h,e := req.FormFile("file"); e == nil && f != nil && h != nil{
+		if objName, err := saveFile(h, f); err == nil {
+			public.ResponseOkAsJson(resp, &public.SimpleResult{
+				Message: "Success",
+				Description: objName,
+			})
+		}else{
+			public.LogE.Printf("Error storing file: %s\n", err.Error())
+			public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+				Message: "Error",
+			})
+		}
+	}else{
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+		})
+	}
+}
+
 //File saving routines
 func saveFile(header *multipart.FileHeader, r io.Reader) (string, error) {
 	if client, err := storage.GetNewStorageClient(); err == nil {
@@ -386,4 +296,5 @@ func saveFile(header *multipart.FileHeader, r io.Reader) (string, error) {
 
 func ConfigFormHandler(router *mux.Router){
 	router.HandleFunc("/submit", public.AuthVerifierWrapper(handleSubmit))
+	router.HandleFunc("/upload", public.AuthVerifierWrapper(handleUploadFile))
 }

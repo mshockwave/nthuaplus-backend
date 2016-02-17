@@ -155,6 +155,6 @@ func GetNewApplicationDatabase() *mgo.Database {
 }
 
 func initSession(){
-	SessionStorage = sessions.NewCookieStore([]byte(NewHashString()))
+	SessionStorage = sessions.NewCookieStore([]byte(/*NewHashString()*/"main-session-storage"))
 	SessionStorage.MaxAge(86400 * 3) //3 days
 }
