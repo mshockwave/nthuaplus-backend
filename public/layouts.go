@@ -9,4 +9,5 @@ type UserProfile struct {
 	Email	string
 	Username	string
 	FormalId	string
+	Thumbnail	string ""
 }

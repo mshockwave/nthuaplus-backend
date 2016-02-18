@@ -14,6 +14,7 @@ import (
 	"mime/multipart"
 	"io"
 	"mime"
+	"time"
 )
 
 const(
@@ -239,6 +240,15 @@ func handleProfile(resp http.ResponseWriter, req *http.Request){
 			Username: user.Username,
 			FormalId: user.FormalId,
 		}
+
+		if client,err := storage.GetNewStorageClient(); err == nil && len(user.Thumbnail) > 0{
+			defer client.Close()
+			expire := time.Now().Add(time.Duration(12) * time.Hour)
+			if r.Thumbnail,err = client.GetNewSignedURL(user.Thumbnail, expire); err != nil {
+				r.Thumbnail = ""
+			}
+		}
+
 		public.ResponseOkAsJson(resp, &r)
 	}
 }
