@@ -19,6 +19,13 @@ type UserAuth struct {
 	BcyptHash	string
 }
 
+type Reviewer struct {
+	Id	bson.ObjectId `bson:"_id,omitempty"`
+	BaseProfile	User
+
+	Topics	[]string
+}
+
 type GradeType float64
 type RankType	uint32
 type ApplicationForm struct {
