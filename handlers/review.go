@@ -123,9 +123,9 @@ func handleReviewRegister(resp http.ResponseWriter, req *http.Request){
 				}
 			}
 
-			newUser := db.Reviewer{ {
+			newUser := db.Reviewer{
 				BaseProfile: baseUser,
-			}}
+			}
 
 			if err := profile.Insert(&newUser); err != nil {
 				r := public.SimpleResult{
