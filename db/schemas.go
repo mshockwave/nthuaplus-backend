@@ -20,10 +20,11 @@ type UserAuth struct {
 }
 
 type Reviewer struct {
-	Id	bson.ObjectId `bson:"_id,omitempty"`
+	Id		bson.ObjectId `bson:"_id,omitempty"`
 	BaseProfile	User
 
-	Topics	[]string
+	Permissions	[]string
+	Topics		[]string
 }
 
 type GradeType float64

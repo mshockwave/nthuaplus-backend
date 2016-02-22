@@ -11,3 +11,13 @@ type UserProfile struct {
 	FormalId	string
 	Thumbnail	string ""
 }
+
+type ReviewerProfile struct {
+	Email	string
+	Username	string
+	FormalId	string
+	Thumbnail	string ""
+
+	Topics		[]string
+	Permissions	[]string
+}
