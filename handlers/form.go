@@ -23,7 +23,7 @@ const(
 	APPLICATION_DB_FORM_COLLECTION = "forms"
 )
 var(
-	TOPICS = []string{"topic1", "topic2", "topic3"}
+	TOPICS = []string{"topic1", "topic2", "topic3", "topic4", "topic5"}
 )
 
 func handleSubmit(resp http.ResponseWriter, req *http.Request){
