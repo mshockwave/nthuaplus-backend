@@ -72,3 +72,11 @@ type LanguageAbility struct{
 	Reading		uint
 	Writing		uint
 }
+
+type BulletinNote struct {
+	Id		string `bson:"_id,omitempty"`
+
+	Title		string ""
+	Content		string ""
+	TimeStamp	time.Time
+}

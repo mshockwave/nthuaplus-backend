@@ -17,6 +17,7 @@ func main() {
 	router := mux.NewRouter()
 	handlers.ConfigUserHandler(router.PathPrefix("/user").Subrouter())
 	handlers.ConfigFormHandler(router.PathPrefix("/form").Subrouter())
+	handlers.ConfigMiscHandlers(router.PathPrefix("/misc").Subrouter())
 
 	http.Handle("/", router)
 

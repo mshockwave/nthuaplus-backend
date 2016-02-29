@@ -28,6 +28,7 @@ var(
 	mainDbSession *mgo.Session
 	userDbSession *mgo.Session
 	applicationDbSession *mgo.Session
+	miscDbSession *mgo.Session
 
 	//Loggers
 	LogV	*log.Logger
@@ -150,6 +151,18 @@ func initDatabases() error {
 		return err
 	}
 
+	//Init misc session
+	miscDbSession = mainDbSession.Copy()
+	err = miscDbSession.Login(&mgo.Credential{
+		Username: username,
+		Password: password,
+		Source: "users",
+	})
+	if err != nil {
+		LogE.Println("Misc database login failed: " + err.Error())
+		return err
+	}
+
 	return nil
 }
 func GetNewUserDatabase() *mgo.Database {
@@ -159,6 +172,10 @@ func GetNewUserDatabase() *mgo.Database {
 func GetNewApplicationDatabase() *mgo.Database {
 	s := applicationDbSession.Copy()
 	return s.DB("applications")
+}
+func GetNewMiscDatabase() *mgo.Database {
+	s := applicationDbSession.Copy()
+	return s.DB("misc")
 }
 
 func initSession(){
