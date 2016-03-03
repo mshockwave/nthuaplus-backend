@@ -572,7 +572,24 @@ func handleRecommendation(resp http.ResponseWriter, req *http.Request) {
 			})
 			return
 		}
-		//TODO
+
+		textContent := req.FormValue("textContent")
+		fileObj := req.FormValue("fileObj")
+
+		result.Content = textContent
+		result.Attachment = fileObj
+		result.Submitted = true
+		err := recomm.UpdateId(result.Id, &result)
+		if err != nil {
+			public.LogE.Println("Update recommendation fields error: " + err.Error())
+			public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
+				Message: "Error",
+			})
+		}else{
+			public.ResponseOkAsJson(resp, &public.SimpleResult{
+				Message: "Success",
+			})
+		}
 	}else{
 		//Get info
 		displayResult := public.RecommResult{
