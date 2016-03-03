@@ -6,6 +6,7 @@ import (
 	"strings"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/wendal/errors"
+	"github.com/dchest/uniuri"
 )
 
 func ResponseOkAsJson(resp http.ResponseWriter, value interface{}) (int, error){
@@ -132,6 +133,7 @@ func EmailFilter(orig string) string { return strings.Replace(orig, "%40", "@", 
 func StringJoin(sep string, elements ...string) string{ return strings.Join(elements, sep) }
 
 func NewHashString() string { return bson.NewObjectId().Hex() }
+func NewSecureHashString() string { return uniuri.New() }
 
 func GetSessionValue(req *http.Request, key interface{}) (interface{}, error) {
 	s, err := SessionStorage.Get(req, USER_AUTH_SESSION)

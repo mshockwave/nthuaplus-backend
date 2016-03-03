@@ -18,6 +18,10 @@ type UserAuth struct {
 	BcryptCost	int
 	BcyptHash	string
 }
+type BasicUser struct {
+	Name	string
+	Email	string
+}
 
 type GradeType float64
 type RankType	uint32
@@ -48,7 +52,7 @@ type ApplicationForm struct {
 
 			       //Extras
 	ResearchPlan    string //File
-	Recommendations string //File
+	Recommendations []string //Recomm entity hashes
 	Transcript      string //File
 	Others          string //File
 }
@@ -74,9 +78,21 @@ type LanguageAbility struct{
 }
 
 type BulletinNote struct {
-	Id		string `bson:"_id,omitempty"`
+	Id		bson.ObjectId `bson:"_id,omitempty"`
 
 	Title		string ""
 	Content		string ""
 	TimeStamp	time.Time
+}
+
+type Recomm struct {
+	Id		bson.ObjectId `bson:"_id,omitempty"`
+
+	Hash		string
+	Submitted	bool
+	ApplyUser	BasicUser
+	Recommender	BasicUser
+
+	Content		string ""
+	Attachment	string ""//File
 }

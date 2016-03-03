@@ -42,6 +42,10 @@ var(
 	//Cloud Storage Signed URL
 	StoragePrivateKey []byte
 	StorageServiceAccountEmail string
+
+	//Constants
+	APPLICATION_DB_FORM_COLLECTION = "forms"
+	APPLICATION_DB_RECOMM_COLLECTION = "recomms"
 )
 
 func init(){

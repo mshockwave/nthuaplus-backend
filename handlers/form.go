@@ -18,10 +18,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-
-const(
-	APPLICATION_DB_FORM_COLLECTION = "forms"
-)
 var(
 	TOPICS = []string{"topic1", "topic2", "topic3", "topic4", "topic5"}
 )
@@ -46,7 +42,6 @@ func handleSubmit(resp http.ResponseWriter, req *http.Request){
 		RelatedSkills: req.FormValue("relatedSkills"),
 
 		ResearchPlan: req.FormValue("researchPlan"),
-		Recommendations: req.FormValue("recommendationLetters"),
 		Transcript: req.FormValue("transcript"),
 		Others: req.FormValue("others"),
 	}
@@ -120,11 +115,22 @@ func handleSubmit(resp http.ResponseWriter, req *http.Request){
 		}
 	}
 
+	if letters, err := parseRecommendationLetters(req); err != nil{
+		public.LogE.Println(err.Error())
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong form format",
+		})
+		return
+	}else{
+		form.Recommendations = handleRecommendationLetters(letters, form.Name, form.Email)
+	}
+
 
 	appDb := public.GetNewApplicationDatabase()
 	defer appDb.Session.Close()
 
-	forms := appDb.C(APPLICATION_DB_FORM_COLLECTION)
+	forms := appDb.C(public.APPLICATION_DB_FORM_COLLECTION)
 	if err := forms.Insert(&form); err != nil {
 		public.LogE.Printf("Insert new form error: " + err.Error())
 		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
@@ -183,6 +189,64 @@ func parseStudiedClasses(req *http.Request) ([]db.StudiedClass, error) {
 
 	decoder.Token() //The last array bracket
 	return classes,nil
+}
+func parseRecommendationLetters(req *http.Request) ([]db.BasicUser, error){
+	var letters []db.BasicUser
+
+	rawJson := req.FormValue("recommendationLetters")
+	if len(rawJson) == 0 {
+		return letters, errors.New("No argument")
+	}
+
+	decoder := json.NewDecoder(strings.NewReader(rawJson))
+	if _,e := decoder.Token(); e != nil {//The first array bracket
+		return letters,errors.New("Wrong json format")
+	}
+
+	element := db.BasicUser{}
+	for decoder.More() {
+		if e := decoder.Decode(&element); e != nil {
+			continue
+		}
+		letters = append(letters, element)
+	}
+
+	decoder.Token() //The last array bracket
+	return letters,nil
+}
+func handleRecommendationLetters(letters []db.BasicUser, name, email string) []string{
+	var hashList []string
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	recomm := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+	for _, l := range letters{
+		r := db.Recomm{
+
+			Hash: public.NewSecureHashString(),
+
+			Submitted: false,
+
+			ApplyUser: db.BasicUser{
+				Name: name,
+				Email: email,
+			},
+			Recommender: db.BasicUser{
+				Name: l.Name,
+				Email: l.Email,
+			},
+		}
+		if e := recomm.Insert(&r); e != nil {
+			public.LogE.Printf("Failed inserting recommendation entity for applyer %s", name)
+		}else{
+			hashList = append(hashList, r.Hash)
+
+			//TODO: Send letters
+		}
+	}
+
+	return hashList
 }
 
 type RawLang struct {
@@ -295,13 +359,112 @@ func saveFile(header *multipart.FileHeader, r io.Reader) (string, error) {
 	}
 }
 
+type exportApplication struct {
+	Timestamp       time.Time
+
+	//Basic Data
+	Name            string
+	School          string
+	Department      string
+	SchoolGrade     string
+	Birthday        time.Time
+	FormalId        string
+	Phone           string
+	Email           string
+	Address         string
+
+	//Academic Data
+	Topic           uint
+	Teacher         string
+	ResearchArea    string
+	ClassHistories  []db.StudiedClass
+	RelatedSkills   string
+	AcademicGrade   db.AcademicGrade
+	LangAbilities   []db.LanguageAbility
+
+	ResearchPlan    string //File
+	Recommendations []public.RecommResult
+	Transcript      string //File
+	Others          string //File
+}
+func (this *exportApplication) fromDbApplication(form *db.ApplicationForm){
+	this.Timestamp = form.Timestamp
+
+	this.Name = form.Name
+	this.School = form.School
+	this.Department = form.Department
+	this.SchoolGrade = form.SchoolGrade
+	this.Birthday = form.Birthday
+	this.FormalId = form.FormalId
+	this.Phone = form.Phone
+	this.Email = form.Email
+	this.Address = form.Address
+
+	this.Topic = form.Topic
+	this.Teacher = form.Teacher
+	this.ResearchArea = form.ResearchArea
+	this.ClassHistories = form.ClassHistories
+	this.RelatedSkills = form.RelatedSkills
+	this.AcademicGrade = form.AcademicGrade
+	this.LangAbilities = form.LangAbilities
+
+	//Extras
+	//Transform file id to url
+	if client,err := storage.GetNewStorageClient(); err == nil {
+
+		expireTime := time.Now().Add(time.Duration(1) * time.Hour) //an hour
+		if obj,e := client.GetNewSignedURL(form.ResearchPlan, expireTime); e == nil {
+			this.ResearchPlan = obj
+		}else{
+			public.LogE.Println("Get object error: " + e.Error())
+		}
+		if obj,e := client.GetNewSignedURL(form.Transcript, expireTime); e == nil {
+			this.Transcript = obj
+		}else{
+			public.LogE.Println("Get object error: " + e.Error())
+		}
+		if len(form.Others) > 0 {
+			if obj,e := client.GetNewSignedURL(form.Others, expireTime); e == nil {
+				this.Others = obj
+			}else{
+				public.LogE.Println("Get object error: " + e.Error())
+			}
+		}
+	}else{
+		public.LogE.Printf("Error getting storage client")
+	}
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+	recomm := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+	var recommList []public.RecommResult
+
+	for _, h := range form.Recommendations {
+		//Transform recommendation from hash to structures
+		q := recomm.Find(bson.M{
+			"hash": h,
+		})
+
+		if n, e := q.Count(); e == nil && n > 0{
+			r := db.Recomm{}
+			if e := q.One(&r); e == nil {
+				recommList = append(recommList, public.RecommResult{
+					Recommender: r.Recommender,
+					ApplyUser: r.ApplyUser,
+					Done: r.Submitted,
+				})
+			}
+		}
+	}
+	this.Recommendations = recommList
+}
 func handleView(resp http.ResponseWriter, req *http.Request) {
 	userId,_ := public.GetSessionUserId(req)
 
 	appDb := public.GetNewApplicationDatabase()
 	defer appDb.Session.Close()
 
-	forms := appDb.C(APPLICATION_DB_FORM_COLLECTION)
+	forms := appDb.C(public.APPLICATION_DB_FORM_COLLECTION)
 	q := forms.Find(bson.M{
 		"ownerid": userId,
 	})
@@ -311,6 +474,20 @@ func handleView(resp http.ResponseWriter, req *http.Request) {
 			Message: "Error",
 		})
 	}else{
+
+		var formResults []exportApplication
+		form := db.ApplicationForm{}
+		it := q.Iter()
+
+		for it.Next(&form) {
+			exportForm := exportApplication{}
+			(&exportForm).fromDbApplication(&form)
+			formResults = append(formResults, exportForm)
+		}
+
+		public.ResponseOkAsJson(resp, formResults)
+
+		/*
 		if client, err := storage.GetNewStorageClient(); err == nil {
 			defer client.Close()
 			var formResults []db.ApplicationForm
@@ -325,11 +502,6 @@ func handleView(resp http.ResponseWriter, req *http.Request) {
 				//Handle the file objects
 				if obj,e := client.GetNewSignedURL(form.ResearchPlan, expireTime); e == nil {
 					form.ResearchPlan = obj
-				}else{
-					public.LogE.Println("Get object error: " + e.Error())
-				}
-				if obj,e := client.GetNewSignedURL(form.Recommendations, expireTime); e == nil {
-					form.Recommendations = obj
 				}else{
 					public.LogE.Println("Get object error: " + e.Error())
 				}
@@ -356,6 +528,59 @@ func handleView(resp http.ResponseWriter, req *http.Request) {
 				Message: "Error",
 			})
 		}
+		*/
+	}
+}
+
+/**
+	POST/PUT:	submit
+	GET(or else):	Get info
+**/
+func handleRecommendation(resp http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	hash := vars["hash"]
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	recomm := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+	q := recomm.Find(bson.M{
+		"hash": hash,
+	})
+	if n,err := q.Count(); err != nil || n <= 0  || len(hash) <= 0{
+		public.ResponseStatusAsJson(resp, 404, &public.SimpleResult{
+			Message: "Error",
+			Description: "No Such page",
+		})
+		return
+	}
+
+	result := db.Recomm{}
+	if err := q.One(&result); err != nil {
+		public.LogE.Printf("Error fetching recommendation data for %s\n", hash)
+		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
+			Message: "Error",
+		})
+		return
+	}
+
+	if req.Method == "POST" || req.Method == "PUT" {
+		//Submit
+		if result.Submitted { //Already submitted
+			public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+				Message: "Error",
+			})
+			return
+		}
+		//TODO
+	}else{
+		//Get info
+		displayResult := public.RecommResult{
+			Recommender: result.Recommender,
+			ApplyUser: result.ApplyUser,
+			Done: result.Submitted,
+		}
+		public.ResponseOkAsJson(resp, &displayResult)
 	}
 }
 
@@ -363,4 +588,6 @@ func ConfigFormHandler(router *mux.Router){
 	router.HandleFunc("/submit", public.AuthVerifierWrapper(handleSubmit))
 	router.HandleFunc("/upload", public.AuthVerifierWrapper(handleUploadFile))
 	router.HandleFunc("/view", public.AuthVerifierWrapper(handleView))
+
+	router.HandleFunc("/recomm/{hash}", handleRecommendation)
 }
