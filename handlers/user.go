@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"github.com/gorilla/mux"
 
-	"../public"
-	"../db"
-	"../storage"
+	"github.com/mshockwave/nthuaplus-backend/public"
+	"github.com/mshockwave/nthuaplus-backend/db"
+	"github.com/mshockwave/nthuaplus-backend/storage"
 	"regexp"
 	"strings"
 	"gopkg.in/mgo.v2/bson"

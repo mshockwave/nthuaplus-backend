@@ -4,9 +4,9 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 
-	"../public"
-	"../db"
-	"../storage"
+	"github.com/mshockwave/nthuaplus-backend/public"
+	"github.com/mshockwave/nthuaplus-backend/db"
+	"github.com/mshockwave/nthuaplus-backend/storage"
 	"github.com/wendal/errors"
 	"fmt"
 	"time"

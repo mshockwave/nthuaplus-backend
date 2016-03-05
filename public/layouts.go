@@ -1,7 +1,7 @@
 package public
 
 import(
-	"../db"
+	"github.com/mshockwave/nthuaplus-backend/db"
 )
 
 type SimpleResult struct {

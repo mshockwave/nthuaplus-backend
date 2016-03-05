@@ -4,8 +4,8 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 
-	"../public"
-	"../db"
+	"github.com/mshockwave/nthuaplus-backend/public"
+	"github.com/mshockwave/nthuaplus-backend/db"
 	"time"
 	"gopkg.in/mgo.v2/bson"
 )

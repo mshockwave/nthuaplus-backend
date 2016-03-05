@@ -7,7 +7,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/net/context"
 
-	"../public"
+	"github.com/mshockwave/nthuaplus-backend/public"
 	"time"
 )
 

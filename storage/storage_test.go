@@ -2,7 +2,7 @@ package storage
 
 import(
 	"testing"
-	"../public"
+	"github.com/mshockwave/nthuaplus-backend/public"
 	"google.golang.org/cloud/storage"
 )
 

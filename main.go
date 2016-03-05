@@ -4,8 +4,8 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 
-	"./handlers"
-	"./public"
+	"github.com/mshockwave/nthuaplus-backend/handlers"
+	"github.com/mshockwave/nthuaplus-backend/public"
 	"fmt"
 	"github.com/gorilla/context"
 	goHandlers "github.com/gorilla/handlers"
