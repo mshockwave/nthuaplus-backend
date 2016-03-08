@@ -48,6 +48,12 @@ func handleBulletinNotes(resp http.ResponseWriter, req *http.Request){
 	public.ResponseOkAsJson(resp, &results)
 }
 
+func handleStatus(resp http.ResponseWriter, req *http.Request){
+
+}
+
 func ConfigMiscHandlers(router *mux.Router){
 	router.HandleFunc("/bulletin", public.AuthVerifierWrapper(handleBulletinNotes))
+
+	router.HandleFunc("/status", public.AuthVerifierWrapper(handleStatus))
 }

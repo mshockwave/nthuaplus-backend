@@ -138,6 +138,8 @@ func StringJoin(sep string, elements ...string) string{ return strings.Join(elem
 func NewHashString() string { return bson.NewObjectId().Hex() }
 func NewSecureHashString() string { return uniuri.New() }
 
+func ConvertName(rawString string) string { return strings.Replace(rawString, "#", "/", -1) }
+
 func GetSessionValue(req *http.Request, key interface{}) (interface{}, error) {
 	s, err := SessionStorage.Get(req, USER_AUTH_SESSION)
 	if err != nil { return nil, err }
