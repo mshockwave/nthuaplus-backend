@@ -242,6 +242,11 @@ func handleRecommendationLetters(letters []db.BasicUser, name, email string) []s
 		}else{
 			hashList = append(hashList, r.Hash)
 
+			url := "https://application.nthuaplus.org/recomm.html?hash=" + r.Hash
+
+			if e := public.SendMail(l.Email, r.ApplyUser, url); e != nil {
+				public.LogE.Println("Error sending email to " + l.Email + ": " + e.Error())
+			}
 		}
 	}
 
