@@ -242,7 +242,6 @@ func handleRecommendationLetters(letters []db.BasicUser, name, email string) []s
 		}else{
 			hashList = append(hashList, r.Hash)
 
-			//TODO: Send letters
 		}
 	}
 

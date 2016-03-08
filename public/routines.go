@@ -7,6 +7,9 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"github.com/wendal/errors"
 	"github.com/dchest/uniuri"
+	gomail "gopkg.in/gomail.v2"
+	"github.com/mshockwave/nthuaplus-backend/db"
+	"bytes"
 )
 
 func ResponseOkAsJson(resp http.ResponseWriter, value interface{}) (int, error){
@@ -180,4 +183,31 @@ func AuthVerifierWrapper(handler http.HandlerFunc) http.HandlerFunc {
 
 		handler(resp, req)
 	}
+}
+
+func SendMail(to string, applier db.BasicUser, url string) error {
+	msg := gomail.NewMessage()
+	msg.SetHeader("From", "noreply@nthuaplus.org")
+	msg.SetHeader("To", to)
+	msg.SetHeader("Subject", RecommLetterSubject)
+
+	//Write letter template
+	data := struct{
+		ApplyUser db.BasicUser
+		RecommUrl string
+	}{
+		ApplyUser: applier,
+		RecommUrl: url,
+	}
+	buffer := new(bytes.Buffer)
+	if e := RecommLetterTmpl.Execute(buffer, &data); e != nil {
+		return e
+	}
+	msg.SetBody("text/plain", buffer.String())
+
+	dialer := gomail.Dialer{
+		Host: "localhost",
+		Port: 25,
+	}
+	return dialer.DialAndSend(msg)
 }

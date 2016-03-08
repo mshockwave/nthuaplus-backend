@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"github.com/gorilla/sessions"
 	"github.com/wendal/errors"
+	"text/template"
 )
 
 const(
@@ -16,6 +17,9 @@ const(
 
 	USER_AUTH_SESSION = "user-auth"
 	USER_ID_SESSION_KEY = "user_id"
+
+	APPLICATION_DB_FORM_COLLECTION = "forms"
+	APPLICATION_DB_RECOMM_COLLECTION = "recomms"
 )
 
 var(
@@ -43,9 +47,8 @@ var(
 	StoragePrivateKey []byte
 	StorageServiceAccountEmail string
 
-	//Constants
-	APPLICATION_DB_FORM_COLLECTION = "forms"
-	APPLICATION_DB_RECOMM_COLLECTION = "recomms"
+	RecommLetterSubject	string
+	RecommLetterTmpl	*template.Template
 )
 
 func init(){
@@ -63,6 +66,8 @@ func init(){
 	initSession()
 
 	initStorage()
+
+	initRecommLetter()
 }
 
 func setDefaultValues(){
@@ -205,5 +210,26 @@ func initStorage(){
 		}else{
 			//LogD.Printf("Private key length: %d\n", len(StoragePrivateKey))
 		}
+	}
+}
+
+func initRecommLetter(){
+	RecommLetterSubject = `NTHU A+ Recommendation Request`;
+	recommLetterContentTmpl := `
+		Hi,
+		This is NTHU A+ management team.
+		{{.ApplyUser.Name}}({{.ApplyUser.Email}}) wanted to request for your recommendation in his/her application.
+		If you know about this, please visit {{.RecommUrl}} to leave your recommendation.
+
+		Best Regards,
+
+		NTHU A+ management team
+		http://www.nthuaplus.org
+	`;
+
+	var err error
+	RecommLetterTmpl,err = template.New("recommLetter").Parse(recommLetterContentTmpl)
+	if err != nil {
+		panic(errors.New("Error parsing recommendation letter template: " + err.Error()))
 	}
 }
