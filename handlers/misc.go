@@ -70,23 +70,23 @@ func handleApplicationStatus(resp http.ResponseWriter, req *http.Request){
 		result.TotalApplicationNum++
 
 		switch form.Topic {
-		case TOPICS[0]:
+		case 0:
 			result.TopicsNum[0] += 1
 			break;
 
-		case TOPICS[1]:
+		case 1:
 			result.TopicsNum[1] += 1
 			break;
 
-		case TOPICS[2]:
+		case 2:
 			result.TopicsNum[2] += 1
 			break;
 
-		case TOPICS[3]:
+		case 3:
 			result.TopicsNum[3] += 1
 			break;
 
-		case TOPICS[4]:
+		case 4:
 			result.TopicsNum[4] += 1
 			break;
 		}
