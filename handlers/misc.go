@@ -48,12 +48,55 @@ func handleBulletinNotes(resp http.ResponseWriter, req *http.Request){
 	public.ResponseOkAsJson(resp, &results)
 }
 
-func handleStatus(resp http.ResponseWriter, req *http.Request){
+type resultAppStatus struct {
+	TotalApplicationNum	int
 
+	TopicsNum		[]int
+}
+func handleApplicationStatus(resp http.ResponseWriter, req *http.Request){
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	appC := appDb.C(public.APPLICATION_DB_FORM_COLLECTION)
+	q := appC.Find(bson.M{})
+
+	result := resultAppStatus{
+		TotalApplicationNum: 0,
+		TopicsNum: make([]int, len(TOPICS), len(TOPICS)),
+	}
+	form := db.ApplicationForm{}
+	it := q.Iter()
+	for it.Next(&form) {
+		result.TotalApplicationNum++
+
+		switch form.Topic {
+		case TOPICS[0]:
+			result.TopicsNum[0] += 1
+			break;
+
+		case TOPICS[1]:
+			result.TopicsNum[1] += 1
+			break;
+
+		case TOPICS[2]:
+			result.TopicsNum[2] += 1
+			break;
+
+		case TOPICS[3]:
+			result.TopicsNum[3] += 1
+			break;
+
+		case TOPICS[4]:
+			result.TopicsNum[4] += 1
+			break;
+		}
+	}
+
+	public.ResponseOkAsJson(resp, &result)
 }
 
 func ConfigMiscHandlers(router *mux.Router){
 	router.HandleFunc("/bulletin", public.AuthVerifierWrapper(handleBulletinNotes))
 
-	router.HandleFunc("/status", public.AuthVerifierWrapper(handleStatus))
+	router.HandleFunc("/status/application", handleApplicationStatus)
 }
