@@ -24,7 +24,7 @@ type BasicUser struct {
 }
 
 type GradeType float64
-type RankType	uint32
+type RankType	int32
 type ApplicationForm struct {
 	Id              bson.ObjectId `bson:"_id,omitempty"`
 	OwnerId         bson.ObjectId

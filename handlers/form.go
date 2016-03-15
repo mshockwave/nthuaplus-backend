@@ -305,7 +305,9 @@ func parseAcademicGrades(req *http.Request) (db.GradeType, db.RankType, error){
 	var averageNum float64
 	var rankingNum int32
 	if n,_ := fmt.Sscanf(average + " " + ranking, "%f %d", &averageNum, &rankingNum); n < 2{
-		return db.GradeType(0.0), db.RankType(0), errors.New("Error academic grades format")
+		//return db.GradeType(0.0), db.RankType(0), errors.New("Error academic grades format")
+		averageNum = float64(-1)
+		rankingNum = int32(-1)
 	}
 
 	return db.GradeType(averageNum), db.RankType(rankingNum), nil
