@@ -49,9 +49,12 @@ func handleBulletinNotes(resp http.ResponseWriter, req *http.Request){
 }
 
 type resultAppStatus struct {
-	TotalApplicationNum	int
+	TotalApplicationNum int
 
-	TopicsNum		[]int
+	TopicsNum           []int
+
+	AccountNum          int
+	AccountNotApplyNum  int
 }
 func handleApplicationStatus(resp http.ResponseWriter, req *http.Request){
 	appDb := public.GetNewApplicationDatabase()
@@ -63,6 +66,9 @@ func handleApplicationStatus(resp http.ResponseWriter, req *http.Request){
 	result := resultAppStatus{
 		TotalApplicationNum: 0,
 		TopicsNum: make([]int, len(TOPICS), len(TOPICS)),
+
+		AccountNum: 0,
+		AccountNotApplyNum: 0,
 	}
 	form := db.ApplicationForm{}
 	it := q.Iter()
@@ -89,6 +95,25 @@ func handleApplicationStatus(resp http.ResponseWriter, req *http.Request){
 		case 4:
 			result.TopicsNum[4] += 1
 			break;
+		}
+	}
+
+	userDb := public.GetNewUserDatabase()
+	defer userDb.Session.Close()
+
+	profileC := userDb.C(USER_DB_PROFILE_COLLECTION)
+	q = profileC.Find(bson.M{})
+	it = q.Iter()
+
+	userResult := db.User{}
+	for it.Next(&userResult){
+		result.AccountNum += 1
+
+		appQ := appC.Find(bson.M{
+			"ownerid": userResult.Id,
+		})
+		if n,_ := appQ.Count(); n < 1{
+			result.AccountNotApplyNum += 1
 		}
 	}
 
