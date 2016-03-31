@@ -5,9 +5,9 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
 
-	"../public"
-	"../db"
-	"../storage"
+	"github.com/mshockwave/nthuaplus-backend/public"
+	"github.com/mshockwave/nthuaplus-backend/db"
+	"github.com/mshockwave/nthuaplus-backend/storage"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )
