@@ -75,7 +75,7 @@ func handleApplicationStatus(resp http.ResponseWriter, req *http.Request){
 	for it.Next(&form) {
 		result.TotalApplicationNum++
 
-		switch form.Topic {
+		switch uint(form.Topic) {
 		case 0:
 			result.TopicsNum[0] += 1
 			break;

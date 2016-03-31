@@ -54,7 +54,7 @@ func handleSubmit(resp http.ResponseWriter, req *http.Request){
 		})
 		return
 	}else{
-		form.Topic = topic
+		form.Topic = db.TopicId(topic)
 	}
 
 	if grade, err := parseSchoolGrade(req); err != nil{
@@ -384,7 +384,7 @@ type exportApplication struct {
 	Address         string
 
 	//Academic Data
-	Topic           uint
+	Topic           db.TopicId
 	Teacher         string
 	ResearchArea    string
 	ClassHistories  []db.StudiedClass

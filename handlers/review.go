@@ -1,206 +1,21 @@
 package handlers
 
 import (
-	"github.com/gorilla/mux"
-	"gopkg.in/mgo.v2/bson"
 	"net/http"
-
 	"github.com/mshockwave/nthuaplus-backend/public"
 	"github.com/mshockwave/nthuaplus-backend/db"
-	"github.com/mshockwave/nthuaplus-backend/storage"
-	"golang.org/x/crypto/bcrypt"
-	"time"
+	"gopkg.in/mgo.v2/bson"
+	"github.com/gorilla/mux"
+	"encoding/json"
+	"io/ioutil"
 )
 
 const(
 	REVIEWER_DB_PROFILE_COLLECTION = "profiles"
+	REVIEWER_DB_RESULT_COLLECTION = "results"
 )
 
-/*func handleReviewRegister(resp http.ResponseWriter, req *http.Request){
-	email := public.EmailFilter(req.FormValue("email"))
-	username := req.FormValue("username")
-	formalId := req.FormValue("formalId")
-	password := req.FormValue("password")
-
-	//Verify values first
-	var errorFields []string
-	if len(email) <= 0{ errorFields = append(errorFields, "Email") }
-	if len(username) <= 0{ errorFields = append(errorFields, "Username") }
-	if len(password) <= 0{ errorFields = append(errorFields, "Password") }
-	if len(formalId) != 10{
-		errorFields = append(errorFields, "FormalId")
-	}else{
-		if match, _ := regexp.MatchString("[A-Z][12][0-9]{8}", formalId); match {
-			if !public.FormalIdVerifier(formalId) {
-				errorFields = append(errorFields, "FormalId")
-			}
-		}else{
-			errorFields = append(errorFields, "FormalId")
-		}
-	}
-
-	if len(errorFields) > 0 {
-		r := public.SimpleResult{
-			Message: "Error",
-			Description: "Wrong Format: " + strings.Join(errorFields, ","),
-		}
-		public.ResponseStatusAsJson(resp, 400, &r)
-	}else{
-		//Get thumbnail if exist
-		var thumb multipart.File = nil
-		var thumbHeader *multipart.FileHeader = nil
-		if f, h, err := req.FormFile("thumbnail"); err == nil && f != nil{
-			thumb = f
-			thumbHeader = h
-		}
-
-		reviewerDb := public.GetNewReviewerDatabase()
-		defer reviewerDb.Session.Close()
-
-		profile := reviewerDb.C(REVIEWER_DB_PROFILE_COLLECTION)
-		q := profile.Find(bson.M{ "baseprofile.email": email })
-		if cnt, err := q.Count(); cnt != 0 || err != nil {
-			if err != nil {
-				r := public.SimpleResult{
-					Message: "Error",
-					Description: err.Error(),
-				}
-				public.ResponseStatusAsJson(resp, 500, &r)
-			}else{
-				//User exist
-				r := public.SimpleResult{
-					Message: "Error",
-					Description: "User Exists",
-				}
-				public.ResponseStatusAsJson(resp, 400, &r)
-			}
-		}else{
-			baseUser := db.User{
-				Email: email,
-				Username: username,
-				FormalId: formalId,
-			}
-			hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-			baseUser.AuthInfo = db.UserAuth{
-				BcryptCost: bcrypt.DefaultCost,
-				BcyptHash: string(hash),
-			}
-
-			//Store thumbnail
-			if thumb != nil {
-				defer thumb.Close()
-				if client, err := storage.GetNewStorageClient(); err == nil {
-
-					h := public.NewHashString()
-					objName := storage.PathJoin(storage.THUMBNAILS_FOLDER_NAME, h)
-					//Determine the extension
-					var ext string = ""
-					if thumbHeader != nil {
-						if segs := strings.Split(thumbHeader.Filename, "."); len(segs) > 1 {
-							ext = "." + segs[ len(segs) - 1 ]
-							objName = (objName + ext)
-						}
-					}
-
-					obj := client.GetDefaultBucket().Object(objName)
-					if attr, _ := obj.Attrs(client.Ctx); attr != nil {
-						if mimeStr := mime.TypeByExtension(ext); len(mimeStr) > 0 {
-							attr.ContentType = mimeStr
-						}
-					}
-					objWriter := obj.NewWriter(client.Ctx)
-					defer objWriter.Close()
-
-					_, err = io.Copy(objWriter, thumb)
-					if err == nil {
-						baseUser.Thumbnail = objName
-					}
-				}
-			}
-
-			newUser := db.Reviewer{
-				BaseProfile: baseUser,
-			}
-
-			if err := profile.Insert(&newUser); err != nil {
-				r := public.SimpleResult{
-					Message: "Register Failed",
-					Description: err.Error(),
-				}
-				public.ResponseStatusAsJson(resp, 400, &r)
-			}else{
-				if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, newUser.Id.Hex()); err != nil {
-					public.LogE.Printf("Error setting session user id: %s\n", err.Error())
-				}
-
-				r := public.SimpleResult{
-					Message: "Register Successed",
-					Description: email,
-				}
-				public.ResponseOkAsJson(resp, &r)
-			}
-		}
-	}
-}*/
-func handleReviewLogin(resp http.ResponseWriter, req *http.Request) {
-	email := public.EmailFilter(req.FormValue("email"))
-	password := req.FormValue("password")
-
-	if len(email) <= 0 || len(password) <= 0 {
-		r := public.SimpleResult{
-			Message: "Error",
-			Description: "Incorrect email or password",
-		}
-		public.ResponseStatusAsJson(resp, 403, &r)
-		return
-	}
-
-	//Check login status
-	if _, err := public.GetSessionUserId(req); err == nil {
-		r := public.SimpleResult{
-			Message: "Already Login",
-			Description: email,
-		}
-		public.ResponseOkAsJson(resp, &r)
-		return
-	}
-
-	reviewerDb := public.GetNewReviewerDatabase()
-	defer reviewerDb.Session.Close()
-
-	profiles := reviewerDb.C(REVIEWER_DB_PROFILE_COLLECTION)
-	q := profiles.Find( bson.M{"baseprofile.email": email} )
-	reviewer := db.Reviewer{}
-	if q.One(&reviewer) == nil {
-		//Check password
-		if bcrypt.CompareHashAndPassword([]byte(reviewer.BaseProfile.AuthInfo.BcyptHash), []byte(password)) != nil {
-			r := public.SimpleResult{
-				Message: "Error",
-				Description: "Incorrect email or password",
-			}
-			public.ResponseStatusAsJson(resp, 403, &r)
-			return
-		}
-
-		if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, reviewer.Id.Hex()); err != nil {
-			public.LogE.Printf("Error setting session user id: %s\n", err.Error())
-		}
-		r := public.SimpleResult{
-			Message: "Login Successed",
-			Description: email,
-		}
-		public.ResponseOkAsJson(resp, &r)
-	}else{
-		r := public.SimpleResult{
-			Message: "Error",
-			Description: "Incorrect email or password",
-		}
-		public.ResponseStatusAsJson(resp, 403, &r)
-		return
-	}
-}
-
-func handleReviewerProfile(resp http.ResponseWriter, req *http.Request) {
+func handleGetReviewApplications(resp http.ResponseWriter, req *http.Request){
 	userId,_ := public.GetSessionUserId(req)
 
 	reviewerDb := public.GetNewReviewerDatabase()
@@ -219,31 +34,105 @@ func handleReviewerProfile(resp http.ResponseWriter, req *http.Request) {
 		reviewer := db.Reviewer{}
 		q.One(&reviewer)
 
-		r := public.ReviewerProfile{
-			Email: reviewer.BaseProfile.Email,
-			Username: reviewer.BaseProfile.Username,
-			FormalId: reviewer.BaseProfile.FormalId,
+		appDb := public.GetNewApplicationDatabase()
+		defer appDb.Session.Close()
 
-			Topics: reviewer.Topics,
-			Permissions: reviewer.Permissions,
-		}
+		forms := appDb.C(public.APPLICATION_DB_FORM_COLLECTION)
 
-		if client,err := storage.GetNewStorageClient(); err == nil && len(reviewer.BaseProfile.Thumbnail) > 0{
-			defer client.Close()
-			expire := time.Now().Add(time.Duration(12) * time.Hour)
-			if r.Thumbnail,err = client.GetNewSignedURL(reviewer.BaseProfile.Thumbnail, expire); err != nil {
-				r.Thumbnail = ""
+		var exportApps []exportApplication
+		for _, t := range reviewer.Topics{
+			q := forms.Find(bson.M{
+				"topic": t,
+			})
+
+			it := q.Iter()
+			appData := db.ApplicationForm{}
+			for it.Next(&appData) {
+
+				exportApp := exportApplication{}
+				(&exportApp).fromDbApplication(&appData)
+				exportApps = append(exportApps, exportApp)
 			}
 		}
 
-		public.ResponseOkAsJson(resp, &r)
+		//Output reviewed topics
+		public.ResponseOkAsJson(resp, &exportApps)
 	}
+}
+
+func handleSubmitReview(resp http.ResponseWriter, req *http.Request){
+	vars := mux.Vars(req)
+	appIdStr := vars["appId"]
+
+	if !bson.IsObjectIdHex(appIdStr) {
+		public.ResponseStatusAsJson(resp, 404, nil)
+		return
+	}
+
+	appId := bson.ObjectIdHex(appIdStr)
+	userId,_ := public.GetSessionUserId(req)
+
+	reviewDb := public.GetNewReviewerDatabase()
+	defer reviewDb.Session.Close()
+	userDb := public.GetNewUserDatabase()
+	defer userDb.Session.Close()
+
+	results := reviewDb.C(REVIEWER_DB_RESULT_COLLECTION)
+	profiles := userDb.C(USER_DB_PROFILE_COLLECTION)
+
+	//See if exist
+	//Re-submit is not allowed
+	q := results.Find(bson.M{
+		"applicationid": appId,
+		"reviewerid": userId,
+	})
+	if n,_ := q.Count(); n > 0{
+		public.ResponseStatusAsJson(resp, 403, &public.SimpleResult{
+			Message: "Error",
+			Description: "Data exist",
+		})
+		return
+	}
+
+	//Get user profile info
+	q = profiles.FindId(userId)
+	user := db.User{}
+	if err := q.One(&user); err != nil {
+		public.ResponseStatusAsJson(resp, 404, nil)
+		return
+	}
+
+	//Get review json data
+	reviewData := public.ReviewResponse{}
+	body,_ := ioutil.ReadAll(req.Body)
+
+	if err := json.Unmarshal(body, &reviewData); err != nil {
+		public.ResponseStatusAsJson(resp, 400, &public.SimpleResult{
+			Message: "Error",
+			Description: "Wrong review response",
+		})
+		return
+	}
+
+	reviewResult := db.ReviewResult{
+		ApplicationId: appId,
+		ReviewerId: userId,
+	}
+	reviewData.CopyToDbReviewResult(&reviewResult)
+
+	if err := results.Insert(&reviewResult); err != nil {
+		public.LogE.Printf("Error inserting new review result: %s\n", err)
+	}
+
+	public.ResponseOkAsJson(resp, nil)
 }
 
 func ConfigReviewHandler(router *mux.Router){
 	//router.HandleFunc("/register", handleReviewRegister)
 	router.HandleFunc("/login", handleReviewLogin)
 	router.HandleFunc("/logout", public.AuthVerifierWrapper(handleLogout))
-
 	router.HandleFunc("/profile", public.AuthVerifierWrapper(handleReviewerProfile))
+
+	router.HandleFunc("/app", public.AuthVerifierWrapper(handleGetReviewApplications))
+	router.HandleFunc("/app/{appId}", public.AuthVerifierWrapper(public.RequestMethodGuard(handleSubmitReview, "post", "put")))
 }

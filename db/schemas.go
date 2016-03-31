@@ -23,14 +23,7 @@ type BasicUser struct {
 	Email	string
 }
 
-type Reviewer struct {
-	Id		bson.ObjectId `bson:"_id,omitempty"`
-	BaseProfile	User
-
-	Permissions	[]string
-	Topics		[]string
-}
-
+type TopicId	uint
 type GradeType float64
 type RankType	int32
 type ApplicationForm struct {
@@ -50,7 +43,7 @@ type ApplicationForm struct {
 	Address         string
 
 			       //Academic Data
-	Topic           uint
+	Topic           TopicId
 	Teacher         string
 	ResearchArea    string
 	ClassHistories  []StudiedClass
@@ -103,4 +96,31 @@ type Recomm struct {
 
 	Content		string ""
 	Attachment	string ""//File
+}
+
+type Reviewer struct {
+	Id		bson.ObjectId `bson:"_id,omitempty"`
+	BaseProfile	User
+
+	Permissions	[]string
+	Topics		[]TopicId
+}
+
+type ReviewScore uint
+type ReviewResult struct {
+	Id		bson.ObjectId `bson:"_id,omitempty"`
+
+	Topic		TopicId
+	ApplicationId	bson.ObjectId
+	ReviewerId	bson.ObjectId
+
+	//Score Data
+	ResearchArea	ReviewScore
+	Classes		ReviewScore
+	Skills		ReviewScore
+	Grade		ReviewScore
+	Language	ReviewScore
+	ResearchPlan	ReviewScore
+	Recomm		ReviewScore
+	Other		ReviewScore
 }

@@ -22,7 +22,7 @@ type ReviewerProfile struct {
 	FormalId	string
 	Thumbnail	string ""
 
-	Topics		[]string
+	Topics		[]db.TopicId
 	Permissions	[]string
 }
 
@@ -30,4 +30,27 @@ type RecommResult  struct {
 	Recommender	db.BasicUser
 	ApplyUser	db.BasicUser
 	Done		bool
+}
+
+type ReviewResponse struct {
+	ResearchArea	int `json:"researchArea"`
+	Classes		int `json:"classes"`
+	Skills		int `json:"skills"`
+	Grade		int `json:"grade"`
+	Language	int `json:"language"`
+	ResearchPlan	int `json:"researchPlan"`
+	Recomm		int `json:"recomm"`
+	Other		int `json:"other"`
+}
+func (this ReviewResponse) CopyToDbReviewResult(result *db.ReviewResult){
+
+	result.ResearchArea = db.ReviewScore(this.ResearchArea)
+	result.Classes = db.ReviewScore(this.Classes)
+	result.Skills = db.ReviewScore(this.Skills)
+	result.Grade = db.ReviewScore(this.Grade)
+	result.Language = db.ReviewScore(this.Language)
+	result.ResearchPlan = db.ReviewScore(this.ResearchPlan)
+	result.Recomm = db.ReviewScore(this.Recomm)
+	result.Other = db.ReviewScore(this.Other)
+
 }

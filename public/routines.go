@@ -16,6 +16,12 @@ func ResponseOkAsJson(resp http.ResponseWriter, value interface{}) (int, error){
 	return ResponseStatusAsJson(resp, 200, value)
 }
 func ResponseStatusAsJson(resp http.ResponseWriter, status int, value interface{}) (int, error){
+	if value == nil {
+		//Just response the status code
+		resp.WriteHeader(status)
+		return status, nil
+	}
+
 	if j_bytes, err := json.Marshal(value); err != nil {
 		resp.WriteHeader(500)
 		return 500, err
@@ -180,6 +186,25 @@ func AuthVerifierWrapper(handler http.HandlerFunc) http.HandlerFunc {
 				Description: "Please Login First",
 			}
 			ResponseStatusAsJson(resp, 403, &r)
+			return
+		}
+
+		handler(resp, req)
+	}
+}
+func RequestMethodGuard(handler http.HandlerFunc, methods ...string) http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request){
+		match := false
+		for _,method := range methods {
+			method = strings.ToLower(method)
+			if strings.ToLower(req.Method) == method {
+				match = true
+				break;
+			}
+		}
+
+		if !match {
+			ResponseStatusAsJson(resp, 404, nil)
 			return
 		}
 
