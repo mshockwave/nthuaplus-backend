@@ -8,11 +8,6 @@ import (
 	"../public"
 	"../db"
 	"../storage"
-	"io"
-	"regexp"
-	"strings"
-	"mime/multipart"
-	"mime"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )
@@ -21,7 +16,7 @@ const(
 	REVIEWER_DB_PROFILE_COLLECTION = "profiles"
 )
 
-func handleReviewRegister(resp http.ResponseWriter, req *http.Request){
+/*func handleReviewRegister(resp http.ResponseWriter, req *http.Request){
 	email := public.EmailFilter(req.FormValue("email"))
 	username := req.FormValue("username")
 	formalId := req.FormValue("formalId")
@@ -146,7 +141,7 @@ func handleReviewRegister(resp http.ResponseWriter, req *http.Request){
 			}
 		}
 	}
-}
+}*/
 func handleReviewLogin(resp http.ResponseWriter, req *http.Request) {
 	email := public.EmailFilter(req.FormValue("email"))
 	password := req.FormValue("password")
@@ -246,7 +241,7 @@ func handleReviewerProfile(resp http.ResponseWriter, req *http.Request) {
 }
 
 func ConfigReviewHandler(router *mux.Router){
-	router.HandleFunc("/register", handleReviewRegister)
+	//router.HandleFunc("/register", handleReviewRegister)
 	router.HandleFunc("/login", handleReviewLogin)
 	router.HandleFunc("/logout", public.AuthVerifierWrapper(handleLogout))
 
