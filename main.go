@@ -18,6 +18,7 @@ func main() {
 	handlers.ConfigUserHandler(router.PathPrefix("/user").Subrouter())
 	handlers.ConfigFormHandler(router.PathPrefix("/form").Subrouter())
 	handlers.ConfigMiscHandlers(router.PathPrefix("/misc").Subrouter())
+	handlers.ConfigReviewHandler(router.PathPrefix("/review").Subrouter())
 
 	http.Handle("/", router)
 

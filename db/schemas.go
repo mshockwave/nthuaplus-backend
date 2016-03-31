@@ -23,6 +23,14 @@ type BasicUser struct {
 	Email	string
 }
 
+type Reviewer struct {
+	Id		bson.ObjectId `bson:"_id,omitempty"`
+	BaseProfile	User
+
+	Permissions	[]string
+	Topics		[]string
+}
+
 type GradeType float64
 type RankType	int32
 type ApplicationForm struct {

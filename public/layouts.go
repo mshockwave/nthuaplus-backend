@@ -16,6 +16,16 @@ type UserProfile struct {
 	Thumbnail	string ""
 }
 
+type ReviewerProfile struct {
+	Email	string
+	Username	string
+	FormalId	string
+	Thumbnail	string ""
+
+	Topics		[]string
+	Permissions	[]string
+}
+
 type RecommResult  struct {
 	Recommender	db.BasicUser
 	ApplyUser	db.BasicUser

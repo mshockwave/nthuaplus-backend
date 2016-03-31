@@ -33,6 +33,7 @@ var(
 	userDbSession *mgo.Session
 	applicationDbSession *mgo.Session
 	miscDbSession *mgo.Session
+	reviewerDbSession *mgo.Session
 
 	//Loggers
 	LogV	*log.Logger
@@ -172,6 +173,18 @@ func initDatabases() error {
 		return err
 	}
 
+	//Init reviewers session
+	reviewerDbSession = mainDbSession.Copy()
+	err = reviewerDbSession.Login(&mgo.Credential{
+		Username: username,
+		Password: password,
+		Source: "users",
+	})
+	if err != nil {
+		LogE.Println("Reviewer database login failed: " + err.Error())
+		return err
+	}
+
 	return nil
 }
 func GetNewUserDatabase() *mgo.Database {
@@ -185,6 +198,10 @@ func GetNewApplicationDatabase() *mgo.Database {
 func GetNewMiscDatabase() *mgo.Database {
 	s := applicationDbSession.Copy()
 	return s.DB("misc")
+}
+func GetNewReviewerDatabase() *mgo.Database {
+	s := reviewerDbSession.Copy()
+	return s.DB("reviewers")
 }
 
 func initSession(){
