@@ -204,7 +204,10 @@ func RequestMethodGuard(handler http.HandlerFunc, methods ...string) http.Handle
 		}
 
 		if !match {
-			ResponseStatusAsJson(resp, 404, nil)
+			ResponseStatusAsJson(resp, 404, &SimpleResult{
+				Message: "Error",
+				Description: req.Method + " is not supported",
+			})
 			return
 		}
 

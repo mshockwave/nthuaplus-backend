@@ -398,7 +398,7 @@ type exportApplication struct {
 	Transcript      string //File
 	Others          string //File
 }
-func (this *exportApplication) fromDbApplication(form *db.ApplicationForm){
+func (this *exportApplication) fromDbApplication(form *db.ApplicationForm, isReviewer bool){
 	this.Timestamp = form.Timestamp
 
 	this.Name = form.Name
@@ -462,11 +462,17 @@ func (this *exportApplication) fromDbApplication(form *db.ApplicationForm){
 		if n, e := q.Count(); e == nil && n > 0{
 			r := db.Recomm{}
 			if e := q.One(&r); e == nil {
-				recommList = append(recommList, public.RecommResult{
+				r := public.RecommResult{
 					Recommender: r.Recommender,
 					ApplyUser: r.ApplyUser,
 					Done: r.Submitted,
-				})
+				}
+				if isReviewer {
+					r.Hash = h
+				}else{
+					r.Hash = ""
+				}
+				recommList = append(recommList, r)
 			}
 		}
 	}
@@ -495,7 +501,7 @@ func handleView(resp http.ResponseWriter, req *http.Request) {
 
 		for it.Next(&form) {
 			exportForm := exportApplication{}
-			(&exportForm).fromDbApplication(&form)
+			(&exportForm).fromDbApplication(&form, false)
 			formResults = append(formResults, exportForm)
 		}
 

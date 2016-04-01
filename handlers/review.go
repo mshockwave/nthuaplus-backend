@@ -8,6 +8,8 @@ import (
 	"github.com/gorilla/mux"
 	"encoding/json"
 	"io/ioutil"
+	"time"
+	"github.com/mshockwave/nthuaplus-backend/storage"
 )
 
 const(
@@ -62,7 +64,7 @@ func handleGetReviewApplications(resp http.ResponseWriter, req *http.Request){
 				}
 
 				exportApp := exportApplication{}
-				(&exportApp).fromDbApplication(&appData)
+				(&exportApp).fromDbApplication(&appData, true)
 				exportApps = append(exportApps, exportApp)
 
 				exportAppHashMap[exportApp.Hash] = appData.Id
@@ -80,7 +82,10 @@ func handleSubmitReview(resp http.ResponseWriter, req *http.Request){
 
 	appId, ok := exportAppHashMap[appHash]
 	if !ok {
-		public.ResponseStatusAsJson(resp, 404, nil)
+		public.ResponseStatusAsJson(resp, 404, &public.SimpleResult{
+			Message: "Error",
+			Description: "Hash not found",
+		})
 		return
 	}
 	delete(exportAppHashMap, appHash)
@@ -93,7 +98,7 @@ func handleSubmitReview(resp http.ResponseWriter, req *http.Request){
 	defer userDb.Session.Close()
 
 	results := reviewDb.C(REVIEWER_DB_RESULT_COLLECTION)
-	profiles := userDb.C(USER_DB_PROFILE_COLLECTION)
+	profiles := reviewDb.C(REVIEWER_DB_PROFILE_COLLECTION)
 
 	//See if exist
 	//Re-submit is not allowed
@@ -142,6 +147,50 @@ func handleSubmitReview(resp http.ResponseWriter, req *http.Request){
 	public.ResponseOkAsJson(resp, nil)
 }
 
+type reviewerRecommResult struct {
+	Content		string
+	AttachmentUrl	string ""
+}
+func handleReviewerRecommView(resp http.ResponseWriter, req *http.Request){
+	vars := mux.Vars(req)
+	hashStr := vars["recommHash"]
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	recomm := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+
+	q := recomm.Find(bson.M{
+		"hash": hashStr,
+	})
+	recommInstance := db.Recomm{}
+	if err := q.One(&recommInstance); err != nil {
+		public.ResponseStatusAsJson(resp, 404, &public.SimpleResult{
+			Message: "Error",
+			Description: "Hash not found",
+		})
+		return
+	}
+
+	recommResult := reviewerRecommResult{
+		Content: recommInstance.Content,
+	}
+
+	if len(recommInstance.Attachment) > 0 {
+		//Create temp url
+		if client, err := storage.GetNewStorageClient(); err == nil {
+			expireTime := time.Now().Add(time.Duration(1) * time.Hour) //an hour
+			if obj,e := client.GetNewSignedURL(recommInstance.Attachment, expireTime); e == nil {
+				recommResult.AttachmentUrl = obj
+			}else{
+				public.LogE.Println("Get object error: " + e.Error())
+			}
+		}
+	}
+
+	public.ResponseOkAsJson(resp, &recommResult)
+}
+
 func ConfigReviewHandler(router *mux.Router){
 	router.HandleFunc("/register", handleReviewRegister)
 	router.HandleFunc("/login", handleReviewLogin)
@@ -150,4 +199,6 @@ func ConfigReviewHandler(router *mux.Router){
 
 	router.HandleFunc("/app", public.AuthVerifierWrapper(handleGetReviewApplications))
 	router.HandleFunc("/app/{appHash}", public.AuthVerifierWrapper(public.RequestMethodGuard(handleSubmitReview, "post", "put")))
+
+	router.HandleFunc("/recomm/{recommHash}", public.AuthVerifierWrapper(public.RequestMethodGuard(handleReviewerRecommView, "get")))
 }

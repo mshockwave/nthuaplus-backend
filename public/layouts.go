@@ -30,6 +30,7 @@ type RecommResult  struct {
 	Recommender	db.BasicUser
 	ApplyUser	db.BasicUser
 	Done		bool
+	Hash		string "" //Only for reviewers
 }
 
 type ReviewResponse struct {
