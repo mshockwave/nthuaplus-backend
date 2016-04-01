@@ -133,7 +133,7 @@ func handleReviewRegister(resp http.ResponseWriter, req *http.Request){
 				}
 				public.ResponseStatusAsJson(resp, 400, &r)
 			}else{
-				if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, newUser.Id.Hex()); err != nil {
+				if err := public.SetReviewerSessionValue(req, resp, public.REVIEWER_ID_SESSION_KEY, newUser.Id.Hex()); err != nil {
 					public.LogE.Printf("Error setting session user id: %s\n", err.Error())
 				}
 
@@ -160,7 +160,7 @@ func handleReviewLogin(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	//Check login status
-	if _, err := public.GetSessionUserId(req); err == nil {
+	if _, err := public.GetSessionReviewerId(req); err == nil {
 		r := public.SimpleResult{
 			Message: "Already Login",
 			Description: email,
@@ -186,7 +186,7 @@ func handleReviewLogin(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, reviewer.Id.Hex()); err != nil {
+		if err := public.SetReviewerSessionValue(req, resp, public.REVIEWER_ID_SESSION_KEY, reviewer.Id.Hex()); err != nil {
 			public.LogE.Printf("Error setting session user id: %s\n", err.Error())
 		}
 		r := public.SimpleResult{
@@ -205,7 +205,7 @@ func handleReviewLogin(resp http.ResponseWriter, req *http.Request) {
 }
 
 func handleReviewerProfile(resp http.ResponseWriter, req *http.Request) {
-	userId,_ := public.GetSessionUserId(req)
+	userId,_ := public.GetSessionReviewerId(req)
 
 	reviewerDb := public.GetNewReviewerDatabase()
 	defer reviewerDb.Session.Close()

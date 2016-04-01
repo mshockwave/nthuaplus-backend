@@ -17,6 +17,8 @@ const(
 
 	USER_AUTH_SESSION = "user-auth"
 	USER_ID_SESSION_KEY = "user_id"
+	REVIEWER_AUTH_SESSION = "reviewer-auth"
+	REVIEWER_ID_SESSION_KEY = "reviewer_id"
 
 	APPLICATION_DB_FORM_COLLECTION = "forms"
 	APPLICATION_DB_RECOMM_COLLECTION = "recomms"

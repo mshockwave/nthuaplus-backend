@@ -152,11 +152,26 @@ func GetSessionValue(req *http.Request, key interface{}) (interface{}, error) {
 
 	return s.Values[key], nil
 }
+func GetReviewerSessionValue(req *http.Request, key interface{}) (interface{}, error) {
+	s, err := SessionStorage.Get(req, REVIEWER_AUTH_SESSION)
+	if err != nil { return nil, err }
+
+	return s.Values[key], nil
+}
 func SetSessionValue(req *http.Request, resp http.ResponseWriter, key, value interface{}) error {
 	//Ignore the error since sometimes the browser side coolie storage is broken
 	//But we still can assign new cookies
 	s, _ := SessionStorage.Get(req, USER_AUTH_SESSION)
 	if s == nil { return errors.New("Session " + USER_AUTH_SESSION + " not available") }
+
+	s.Values[key] = value
+	return s.Save(req, resp)
+}
+func SetReviewerSessionValue(req *http.Request, resp http.ResponseWriter, key, value interface{}) error {
+	//Ignore the error since sometimes the browser side coolie storage is broken
+	//But we still can assign new cookies
+	s, _ := SessionStorage.Get(req, REVIEWER_AUTH_SESSION)
+	if s == nil { return errors.New("Session " + REVIEWER_AUTH_SESSION + " not available") }
 
 	s.Values[key] = value
 	return s.Save(req, resp)
@@ -177,10 +192,39 @@ func GetSessionUserId(req *http.Request) (bson.ObjectId, error){
 		}
 	}
 }
+func GetSessionReviewerId(req *http.Request) (bson.ObjectId, error){
+	if v, err := GetReviewerSessionValue(req, REVIEWER_ID_SESSION_KEY); err != nil || v == nil{
+		return bson.ObjectId(""), errors.New("Invalid session id format")
+	}else{
+		if str, found := v.(string); found {
+			if bson.IsObjectIdHex(str) {
+				return bson.ObjectIdHex(str), nil
+			}else{
+				return bson.ObjectId(""), errors.New("Invalid session id format")
+			}
+		}else{
+			return bson.ObjectId(""), errors.New("Invalid session id format")
+		}
+	}
+}
 
 func AuthVerifierWrapper(handler http.HandlerFunc) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request){
 		if _, err := GetSessionUserId(req); err != nil {
+			r := SimpleResult{
+				Message: "Error",
+				Description: "Please Login First",
+			}
+			ResponseStatusAsJson(resp, 403, &r)
+			return
+		}
+
+		handler(resp, req)
+	}
+}
+func AuthReviewerVerifyWrapper(handler http.HandlerFunc) http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request){
+		if _, err := GetSessionReviewerId(req); err != nil {
 			r := SimpleResult{
 				Message: "Error",
 				Description: "Please Login First",

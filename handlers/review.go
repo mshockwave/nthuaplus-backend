@@ -21,7 +21,7 @@ var(
 )
 
 func handleGetReviewApplications(resp http.ResponseWriter, req *http.Request){
-	userId,_ := public.GetSessionUserId(req)
+	userId,_ := public.GetSessionReviewerId(req)
 
 	reviewerDb := public.GetNewReviewerDatabase()
 	defer reviewerDb.Session.Close()
@@ -90,7 +90,7 @@ func handleSubmitReview(resp http.ResponseWriter, req *http.Request){
 	}
 	delete(exportAppHashMap, appHash)
 
-	userId,_ := public.GetSessionUserId(req)
+	userId,_ := public.GetSessionReviewerId(req)
 
 	reviewDb := public.GetNewReviewerDatabase()
 	defer reviewDb.Session.Close()
@@ -194,11 +194,14 @@ func handleReviewerRecommView(resp http.ResponseWriter, req *http.Request){
 func ConfigReviewHandler(router *mux.Router){
 	router.HandleFunc("/register", handleReviewRegister)
 	router.HandleFunc("/login", handleReviewLogin)
-	router.HandleFunc("/logout", public.AuthVerifierWrapper(handleLogout))
-	router.HandleFunc("/profile", public.AuthVerifierWrapper(handleReviewerProfile))
+	router.HandleFunc("/logout", public.AuthReviewerVerifyWrapper(handleLogout))
+	router.HandleFunc("/profile", public.AuthReviewerVerifyWrapper(handleReviewerProfile))
 
-	router.HandleFunc("/app", public.AuthVerifierWrapper(handleGetReviewApplications))
-	router.HandleFunc("/app/{appHash}", public.AuthVerifierWrapper(public.RequestMethodGuard(handleSubmitReview, "post", "put")))
+	router.HandleFunc("/app",
+		public.AuthReviewerVerifyWrapper(handleGetReviewApplications))
+	router.HandleFunc("/app/{appHash}",
+		public.AuthReviewerVerifyWrapper(public.RequestMethodGuard(handleSubmitReview, "post", "put")))
 
-	router.HandleFunc("/recomm/{recommHash}", public.AuthVerifierWrapper(public.RequestMethodGuard(handleReviewerRecommView, "get")))
+	router.HandleFunc("/recomm/{recommHash}",
+		public.AuthReviewerVerifyWrapper(public.RequestMethodGuard(handleReviewerRecommView, "get")))
 }
