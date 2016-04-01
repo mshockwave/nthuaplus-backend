@@ -123,4 +123,5 @@ type ReviewResult struct {
 	ResearchPlan	ReviewScore
 	Recomm		ReviewScore
 	Other		ReviewScore
+	Overall		ReviewScore
 }

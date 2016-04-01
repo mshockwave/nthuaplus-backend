@@ -42,6 +42,7 @@ type ReviewResponse struct {
 	ResearchPlan	int `json:"researchPlan"`
 	Recomm		int `json:"recomm"`
 	Other		int `json:"other"`
+	Overall		int `json:"overall"`
 }
 func (this ReviewResponse) CopyToDbReviewResult(result *db.ReviewResult){
 
@@ -53,5 +54,5 @@ func (this ReviewResponse) CopyToDbReviewResult(result *db.ReviewResult){
 	result.ResearchPlan = db.ReviewScore(this.ResearchPlan)
 	result.Recomm = db.ReviewScore(this.Recomm)
 	result.Other = db.ReviewScore(this.Other)
-
+	result.Overall = db.ReviewScore(this.Overall)
 }
