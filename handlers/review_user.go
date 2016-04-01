@@ -204,6 +204,20 @@ func handleReviewLogin(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handleReviewerLogout(resp http.ResponseWriter, req *http.Request){
+	if err := public.SetReviewerSessionValue(req, resp, public.REVIEWER_ID_SESSION_KEY, nil); err != nil {
+		public.LogE.Printf("Logout Failed: %s\n", err.Error())
+		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
+			Message: "Error",
+			Description: "Logout Failed",
+		})
+	}else{
+		public.ResponseOkAsJson(resp, &public.SimpleResult{
+			Message: "Logout Success",
+		})
+	}
+}
+
 func handleReviewerProfile(resp http.ResponseWriter, req *http.Request) {
 	userId,_ := public.GetSessionReviewerId(req)
 

@@ -194,7 +194,7 @@ func handleReviewerRecommView(resp http.ResponseWriter, req *http.Request){
 func ConfigReviewHandler(router *mux.Router){
 	router.HandleFunc("/register", handleReviewRegister)
 	router.HandleFunc("/login", handleReviewLogin)
-	router.HandleFunc("/logout", public.AuthReviewerVerifyWrapper(handleLogout))
+	router.HandleFunc("/logout", public.AuthReviewerVerifyWrapper(handleReviewerLogout))
 	router.HandleFunc("/profile", public.AuthReviewerVerifyWrapper(handleReviewerProfile))
 
 	router.HandleFunc("/app",
