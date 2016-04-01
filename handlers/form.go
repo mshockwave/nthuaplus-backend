@@ -371,6 +371,7 @@ func saveFile(header *multipart.FileHeader, r io.Reader) (string, error) {
 
 type exportApplication struct {
 	Timestamp       time.Time
+	Hash		string "" //Optional
 
 	//Basic Data
 	Name            string
@@ -417,6 +418,9 @@ func (this *exportApplication) fromDbApplication(form *db.ApplicationForm){
 	this.RelatedSkills = form.RelatedSkills
 	this.AcademicGrade = form.AcademicGrade
 	this.LangAbilities = form.LangAbilities
+
+	//Hash
+	this.Hash = public.NewSecureHashString()
 
 	//Extras
 	//Transform file id to url

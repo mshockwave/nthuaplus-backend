@@ -3,19 +3,24 @@ package handlers
 import (
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
+	"strings"
 
 	"github.com/mshockwave/nthuaplus-backend/public"
 	"github.com/mshockwave/nthuaplus-backend/db"
 	"github.com/mshockwave/nthuaplus-backend/storage"
 	"golang.org/x/crypto/bcrypt"
 	"time"
+	"regexp"
+	"mime/multipart"
+	"mime"
+	"io"
 )
 
 const(
 	REVIEWER_DB_PROFILE_COLLECTION = "profiles"
 )
 
-/*func handleReviewRegister(resp http.ResponseWriter, req *http.Request){
+func handleReviewRegister(resp http.ResponseWriter, req *http.Request){
 	email := public.EmailFilter(req.FormValue("email"))
 	username := req.FormValue("username")
 	formalId := req.FormValue("formalId")
@@ -140,7 +145,7 @@ const(
 			}
 		}
 	}
-}*/
+}
 func handleReviewLogin(resp http.ResponseWriter, req *http.Request) {
 	email := public.EmailFilter(req.FormValue("email"))
 	password := req.FormValue("password")

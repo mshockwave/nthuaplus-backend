@@ -11,8 +11,11 @@ import (
 )
 
 const(
-	REVIEWER_DB_PROFILE_COLLECTION = "profiles"
 	REVIEWER_DB_RESULT_COLLECTION = "results"
+)
+
+var(
+	exportAppHashMap map[string]bson.ObjectId
 )
 
 func handleGetReviewApplications(resp http.ResponseWriter, req *http.Request){
@@ -38,6 +41,7 @@ func handleGetReviewApplications(resp http.ResponseWriter, req *http.Request){
 		defer appDb.Session.Close()
 
 		forms := appDb.C(public.APPLICATION_DB_FORM_COLLECTION)
+		results := reviewerDb.C(REVIEWER_DB_RESULT_COLLECTION)
 
 		var exportApps []exportApplication
 		for _, t := range reviewer.Topics{
@@ -48,10 +52,20 @@ func handleGetReviewApplications(resp http.ResponseWriter, req *http.Request){
 			it := q.Iter()
 			appData := db.ApplicationForm{}
 			for it.Next(&appData) {
+				//Check if reviewed
+				q_r := results.Find(bson.M{
+					"applicationid": appData.Id,
+				})
+				if n,_ := q_r.Count(); n > 0 {
+					//Has reviewed
+					continue
+				}
 
 				exportApp := exportApplication{}
 				(&exportApp).fromDbApplication(&appData)
 				exportApps = append(exportApps, exportApp)
+
+				exportAppHashMap[exportApp.Hash] = appData.Id
 			}
 		}
 
@@ -62,14 +76,15 @@ func handleGetReviewApplications(resp http.ResponseWriter, req *http.Request){
 
 func handleSubmitReview(resp http.ResponseWriter, req *http.Request){
 	vars := mux.Vars(req)
-	appIdStr := vars["appId"]
+	appHash := vars["appHash"]
 
-	if !bson.IsObjectIdHex(appIdStr) {
+	appId, ok := exportAppHashMap[appHash]
+	if !ok {
 		public.ResponseStatusAsJson(resp, 404, nil)
 		return
 	}
+	delete(exportAppHashMap, appHash)
 
-	appId := bson.ObjectIdHex(appIdStr)
 	userId,_ := public.GetSessionUserId(req)
 
 	reviewDb := public.GetNewReviewerDatabase()
@@ -128,11 +143,11 @@ func handleSubmitReview(resp http.ResponseWriter, req *http.Request){
 }
 
 func ConfigReviewHandler(router *mux.Router){
-	//router.HandleFunc("/register", handleReviewRegister)
+	router.HandleFunc("/register", handleReviewRegister)
 	router.HandleFunc("/login", handleReviewLogin)
 	router.HandleFunc("/logout", public.AuthVerifierWrapper(handleLogout))
 	router.HandleFunc("/profile", public.AuthVerifierWrapper(handleReviewerProfile))
 
 	router.HandleFunc("/app", public.AuthVerifierWrapper(handleGetReviewApplications))
-	router.HandleFunc("/app/{appId}", public.AuthVerifierWrapper(public.RequestMethodGuard(handleSubmitReview, "post", "put")))
+	router.HandleFunc("/app/{appHash}", public.AuthVerifierWrapper(public.RequestMethodGuard(handleSubmitReview, "post", "put")))
 }
