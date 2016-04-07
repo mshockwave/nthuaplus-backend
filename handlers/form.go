@@ -621,10 +621,33 @@ func handleRecommendation(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handleRecommendationUpload(resp http.ResponseWriter, req *http.Request){
+	vars := mux.Vars(req)
+	hash := vars["hash"]
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	recomm := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+	q := recomm.Find(bson.M{
+		"hash": hash,
+	})
+	if n,err := q.Count(); err != nil || n <= 0  || len(hash) <= 0{
+		public.ResponseStatusAsJson(resp, 404, &public.SimpleResult{
+			Message: "Error",
+			Description: "No Such page",
+		})
+		return
+	}
+
+	handleUploadFile(resp, req)
+}
+
 func ConfigFormHandler(router *mux.Router){
 	router.HandleFunc("/submit", public.AuthVerifierWrapper(handleSubmit))
 	router.HandleFunc("/upload", public.AuthVerifierWrapper(handleUploadFile))
 	router.HandleFunc("/view", public.AuthVerifierWrapper(handleView))
 
 	router.HandleFunc("/recomm/{hash}", handleRecommendation)
+	router.HandleFunc("/recomm/{hash}/upload", public.RequestMethodGuard(handleRecommendationUpload, "post", "put"))
 }
