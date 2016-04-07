@@ -49,11 +49,21 @@ func handleGetReviewApplications(resp http.ResponseWriter, req *http.Request){
 		for _, t := range reviewer.Topics{
 			q := forms.Find(bson.M{
 				"topic": t,
-			})
+			}).Sort("-timestamp") //From new to old
+
+			//Remove the duplicate application
+			//Keep the latest one
+			ownerSet := make(map[bson.ObjectId]bool)
 
 			it := q.Iter()
 			appData := db.ApplicationForm{}
 			for it.Next(&appData) {
+
+				if _,ok := ownerSet[appData.OwnerId]; ok {
+					//Exist duplicate application
+					continue
+				}
+
 				//Check if reviewed
 				q_r := results.Find(bson.M{
 					"applicationid": appData.Id,
@@ -68,6 +78,8 @@ func handleGetReviewApplications(resp http.ResponseWriter, req *http.Request){
 				exportApps = append(exportApps, exportApp)
 
 				exportAppHashMap[exportApp.Hash] = appData.Id
+
+				ownerSet[appData.OwnerId] = true
 			}
 		}
 
