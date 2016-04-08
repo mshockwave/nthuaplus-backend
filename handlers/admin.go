@@ -203,6 +203,37 @@ func handleGMGetRecomms(resp http.ResponseWriter, req *http.Request){
 	gmMockWrapper(resp, req, getUserRecomms)
 }
 
+func handleGMRecommsResend(resp http.ResponseWriter, req *http.Request){
+	vars := mux.Vars(req)
+	hash := vars["recommHash"]
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	recomm := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+	q := recomm.Find(bson.M{
+		"hash": hash,
+	})
+	recommObj := db.Recomm{}
+	if err := q.One(&recommObj); err != nil || len(hash) <= 0{
+		public.ResponseStatusAsJson(resp, 404, &public.SimpleResult{
+			Message: "Error",
+			Description: "No Such page",
+		})
+		return
+	}
+
+	url := "https://application.nthuaplus.org/recomm.html?hash=" + hash
+	if e := public.SendMail(recommObj.Recommender.Email, recommObj.ApplyUser, url); e != nil {
+		public.LogE.Printf("Error sending email: %s\n", e.Error())
+		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
+			Message: "Error",
+		})
+	}else{
+		public.ResponseOkAsJson(resp, nil)
+	}
+}
+
 func ConfigAdminHandler(router *mux.Router){
 	router.HandleFunc("/login", handleGMLogin)
 	router.HandleFunc("/profile", public.AuthGMVerifierWrapper(handleGMProfile))
@@ -215,4 +246,5 @@ func ConfigAdminHandler(router *mux.Router){
 	router.HandleFunc("/form/view", public.AuthGMVerifierWrapper(handleGMFormView))
 
 	router.HandleFunc("/form/recomm", public.AuthGMVerifierWrapper(handleGMGetRecomms))
+	router.HandleFunc("/form/recomm/{recommHash}/resend", public.AuthGMVerifierWrapper(handleGMRecommsResend))
 }
