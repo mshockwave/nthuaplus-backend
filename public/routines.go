@@ -12,6 +12,10 @@ import (
 	"bytes"
 )
 
+const(
+	GM_PERMITTED_HEADER_KEY = "GM-AUTHORIZE-DATA"
+)
+
 func ResponseOkAsJson(resp http.ResponseWriter, value interface{}) (int, error){
 	return ResponseStatusAsJson(resp, 200, value)
 }
@@ -146,7 +150,7 @@ func NewSecureHashString() string { return uniuri.New() }
 
 func ConvertName(rawString string) string { return strings.Replace(rawString, "#", "/", -1) }
 
-func GetSessionValue(req *http.Request, key interface{}) (interface{}, error) {
+func GetUserSessionValue(req *http.Request, key interface{}) (interface{}, error) {
 	s, err := SessionStorage.Get(req, USER_AUTH_SESSION)
 	if err != nil { return nil, err }
 
@@ -158,7 +162,13 @@ func GetReviewerSessionValue(req *http.Request, key interface{}) (interface{}, e
 
 	return s.Values[key], nil
 }
-func SetSessionValue(req *http.Request, resp http.ResponseWriter, key, value interface{}) error {
+func GetGMSessionValue(req *http.Request, key interface{}) (interface{}, error) {
+	s, err := SessionStorage.Get(req, GM_AUTH_SESSION)
+	if err != nil { return nil, err }
+
+	return s.Values[key], nil
+}
+func SetUserSessionValue(req *http.Request, resp http.ResponseWriter, key, value interface{}) error {
 	//Ignore the error since sometimes the browser side coolie storage is broken
 	//But we still can assign new cookies
 	s, _ := SessionStorage.Get(req, USER_AUTH_SESSION)
@@ -176,9 +186,25 @@ func SetReviewerSessionValue(req *http.Request, resp http.ResponseWriter, key, v
 	s.Values[key] = value
 	return s.Save(req, resp)
 }
+func SetGMSessionValue(req *http.Request, resp http.ResponseWriter, key, value interface{}) error {
+	//Ignore the error since sometimes the browser side coolie storage is broken
+	//But we still can assign new cookies
+	s, _ := SessionStorage.Get(req, GM_AUTH_SESSION)
+	if s == nil { return errors.New("Session " + GM_AUTH_SESSION + " not available") }
+
+	s.Values[key] = value
+	return s.Save(req, resp)
+}
 
 func GetSessionUserId(req *http.Request) (bson.ObjectId, error){
-	if v, err := GetSessionValue(req, USER_ID_SESSION_KEY); err != nil || v == nil{
+
+	if data := req.Header.Get(GM_PERMITTED_HEADER_KEY); len(data) != 0 && bson.IsObjectIdHex(data){
+		//Controlled user id
+		user_id := bson.ObjectIdHex(data)
+		return user_id, nil
+	}
+
+	if v, err := GetUserSessionValue(req, USER_ID_SESSION_KEY); err != nil || v == nil{
 		return bson.ObjectId(""), errors.New("Invalid session id format")
 	}else{
 		if str, found := v.(string); found {
@@ -207,9 +233,30 @@ func GetSessionReviewerId(req *http.Request) (bson.ObjectId, error){
 		}
 	}
 }
+func GetSessionGMId(req *http.Request) (bson.ObjectId, error){
+	if v, err := GetGMSessionValue(req, GM_ID_SESSION_KEY); err != nil || v == nil{
+		return bson.ObjectId(""), errors.New("Invalid session id format")
+	}else{
+		if str, found := v.(string); found {
+			if bson.IsObjectIdHex(str) {
+				return bson.ObjectIdHex(str), nil
+			}else{
+				return bson.ObjectId(""), errors.New("Invalid session id format")
+			}
+		}else{
+			return bson.ObjectId(""), errors.New("Invalid session id format")
+		}
+	}
+}
 
-func AuthVerifierWrapper(handler http.HandlerFunc) http.HandlerFunc {
+func AuthUserVerifierWrapper(handler http.HandlerFunc) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request){
+
+		//Eliminate GM_AUTHORIZE_HEADER_KEY header field
+		if data := req.Header.Get(GM_PERMITTED_HEADER_KEY); len(data) != 0 {
+			req.Header.Del(GM_PERMITTED_HEADER_KEY)
+		}
+
 		if _, err := GetSessionUserId(req); err != nil {
 			r := SimpleResult{
 				Message: "Error",
@@ -236,6 +283,21 @@ func AuthReviewerVerifyWrapper(handler http.HandlerFunc) http.HandlerFunc {
 		handler(resp, req)
 	}
 }
+func AuthGMVerifierWrapper(handler http.HandlerFunc) http.HandlerFunc {
+	return func(resp http.ResponseWriter, req *http.Request){
+		if _, err := GetSessionGMId(req); err != nil {
+			r := SimpleResult{
+				Message: "Error",
+				Description: "Please Login First",
+			}
+			ResponseStatusAsJson(resp, 403, &r)
+			return
+		}
+
+		handler(resp, req)
+	}
+}
+
 func RequestMethodGuard(handler http.HandlerFunc, methods ...string) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request){
 		match := false

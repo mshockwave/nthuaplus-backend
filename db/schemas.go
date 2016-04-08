@@ -22,6 +22,12 @@ type BasicUser struct {
 	Name	string
 	Email	string
 }
+type GMInfo struct {
+	Id	bson.ObjectId `bson:"_id,omitempty"`
+	UserId	bson.ObjectId
+
+	//TODO: Permissions
+}
 
 type TopicId	uint
 type GradeType float64

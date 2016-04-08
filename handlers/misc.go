@@ -121,7 +121,7 @@ func handleApplicationStatus(resp http.ResponseWriter, req *http.Request){
 }
 
 func ConfigMiscHandlers(router *mux.Router){
-	router.HandleFunc("/bulletin", public.AuthVerifierWrapper(handleBulletinNotes))
+	router.HandleFunc("/bulletin", public.AuthUserVerifierWrapper(handleBulletinNotes))
 
 	router.HandleFunc("/status/application", handleApplicationStatus)
 }

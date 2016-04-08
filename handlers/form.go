@@ -22,7 +22,7 @@ var(
 	TOPICS = []string{"topic1", "topic2", "topic3", "topic4", "topic5"}
 )
 
-func handleSubmit(resp http.ResponseWriter, req *http.Request){
+func handleFormSubmit(resp http.ResponseWriter, req *http.Request){
 	ownerId,_ := public.GetSessionUserId(req)
 
 	form := db.ApplicationForm{
@@ -315,7 +315,7 @@ func parseAcademicGrades(req *http.Request) (db.GradeType, db.RankType, error){
 	return db.GradeType(averageNum), db.RankType(rankingNum), nil
 }
 
-func handleUploadFile(resp http.ResponseWriter, req *http.Request) {
+func handleFormFileUpload(resp http.ResponseWriter, req *http.Request) {
 	if f,h,e := req.FormFile("file"); e == nil && f != nil && h != nil{
 		if objName, err := saveFile(h, f); err == nil {
 			public.ResponseOkAsJson(resp, &public.SimpleResult{
@@ -478,7 +478,7 @@ func (this *exportApplication) fromDbApplication(form *db.ApplicationForm, isRev
 	}
 	this.Recommendations = recommList
 }
-func handleView(resp http.ResponseWriter, req *http.Request) {
+func handleFormView(resp http.ResponseWriter, req *http.Request) {
 	userId,_ := public.GetSessionUserId(req)
 
 	appDb := public.GetNewApplicationDatabase()
@@ -640,13 +640,13 @@ func handleRecommendationUpload(resp http.ResponseWriter, req *http.Request){
 		return
 	}
 
-	handleUploadFile(resp, req)
+	handleFormFileUpload(resp, req)
 }
 
 func ConfigFormHandler(router *mux.Router){
-	router.HandleFunc("/submit", public.AuthVerifierWrapper(handleSubmit))
-	router.HandleFunc("/upload", public.AuthVerifierWrapper(handleUploadFile))
-	router.HandleFunc("/view", public.AuthVerifierWrapper(handleView))
+	router.HandleFunc("/submit", public.AuthUserVerifierWrapper(handleFormSubmit))
+	router.HandleFunc("/upload", public.AuthUserVerifierWrapper(handleFormFileUpload))
+	router.HandleFunc("/view", public.AuthUserVerifierWrapper(handleFormView))
 
 	router.HandleFunc("/recomm/{hash}", handleRecommendation)
 	router.HandleFunc("/recomm/{hash}/upload", public.RequestMethodGuard(handleRecommendationUpload, "post", "put"))

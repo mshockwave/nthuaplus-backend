@@ -130,7 +130,7 @@ func handleRegister(resp http.ResponseWriter, req *http.Request){
 				}
 				public.ResponseStatusAsJson(resp, 400, &r)
 			}else{
-				if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, newUser.Id.Hex()); err != nil {
+				if err := public.SetUserSessionValue(req, resp, public.USER_ID_SESSION_KEY, newUser.Id.Hex()); err != nil {
 					public.LogE.Printf("Error setting session user id: %s\n", err.Error())
 				}
 
@@ -184,7 +184,7 @@ func handleLogin(resp http.ResponseWriter, req *http.Request){
 			return
 		}
 
-		if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, user.Id.Hex()); err != nil {
+		if err := public.SetUserSessionValue(req, resp, public.USER_ID_SESSION_KEY, user.Id.Hex()); err != nil {
 			public.LogE.Printf("Error setting session user id: %s\n", err.Error())
 		}
 		r := public.SimpleResult{
@@ -203,7 +203,7 @@ func handleLogin(resp http.ResponseWriter, req *http.Request){
 }
 
 func handleLogout(resp http.ResponseWriter, req *http.Request){
-	if err := public.SetSessionValue(req, resp, public.USER_ID_SESSION_KEY, nil); err != nil {
+	if err := public.SetUserSessionValue(req, resp, public.USER_ID_SESSION_KEY, nil); err != nil {
 		public.LogE.Printf("Logout Failed: %s\n", err.Error())
 		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
 			Message: "Error",
@@ -216,7 +216,7 @@ func handleLogout(resp http.ResponseWriter, req *http.Request){
 	}
 }
 
-func handleProfile(resp http.ResponseWriter, req *http.Request){
+func handleUserProfile(resp http.ResponseWriter, req *http.Request){
 	userId,_ := public.GetSessionUserId(req)
 
 	userDb := public.GetNewUserDatabase()
@@ -256,7 +256,7 @@ func handleProfile(resp http.ResponseWriter, req *http.Request){
 func ConfigUserHandler(router *mux.Router){
 	router.HandleFunc("/register", handleRegister)
 	router.HandleFunc("/login", handleLogin)
-	router.HandleFunc("/logout", public.AuthVerifierWrapper(handleLogout))
+	router.HandleFunc("/logout", public.AuthUserVerifierWrapper(handleLogout))
 
-	router.HandleFunc("/profile", public.AuthVerifierWrapper(handleProfile))
+	router.HandleFunc("/profile", public.AuthUserVerifierWrapper(handleUserProfile))
 }
