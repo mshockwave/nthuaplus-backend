@@ -168,12 +168,18 @@ func getUserRecomms(resp http.ResponseWriter, req *http.Request){
 	defer appDb.Session.Close()
 
 	forms := appDb.C(public.APPLICATION_DB_FORM_COLLECTION)
-	q := forms.Find(bson.M{ "ownerid": user_id })
+	q := forms.Find(bson.M{ "ownerid": user_id }).Sort("-timestamp")
 	it := q.Iter()
 
 	form := db.ApplicationForm{}
 	var recommList []public.RecommResult
+	topicMap := make(map[db.TopicId]bool)
 	for it.Next(&form) {
+		if _,exist := topicMap[form.Topic]; exist {
+			//Skip
+			continue
+		}
+
 		recomm := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
 
 		for _, h := range form.Recommendations {
@@ -195,6 +201,8 @@ func getUserRecomms(resp http.ResponseWriter, req *http.Request){
 				}
 			}
 		}
+
+		topicMap[form.Topic] = true
 	}
 
 	public.ResponseOkAsJson(resp, &recommList)
