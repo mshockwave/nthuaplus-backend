@@ -351,9 +351,9 @@ func saveFile(header *multipart.FileHeader, r io.Reader) (string, error) {
 
 		obj := client.GetDefaultBucket().Object(objName)
 		objWriter := obj.NewWriter(client.Ctx)
-		defer objWriter.Close()
 
 		_, err = io.Copy(objWriter, r)
+		objWriter.Close()
 		if err == nil {
 
 			if attr, e := obj.Attrs(client.Ctx); attr != nil && e == nil{
