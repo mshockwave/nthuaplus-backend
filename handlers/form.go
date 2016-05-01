@@ -359,6 +359,7 @@ func saveFile(header *multipart.FileHeader, r io.Reader) (string, error) {
 			if attr, e := obj.Attrs(client.Ctx); attr != nil && e == nil{
 				if mimeStr := mime.TypeByExtension(ext); len(mimeStr) > 0 {
 					attr.ContentType = mimeStr
+					obj.Update(client.Ctx, *attr)
 				}
 			}
 
