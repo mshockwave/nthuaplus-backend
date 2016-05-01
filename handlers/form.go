@@ -350,16 +350,18 @@ func saveFile(header *multipart.FileHeader, r io.Reader) (string, error) {
 		}
 
 		obj := client.GetDefaultBucket().Object(objName)
-		if attr, _ := obj.Attrs(client.Ctx); attr != nil {
-			if mimeStr := mime.TypeByExtension(ext); len(mimeStr) > 0 {
-				attr.ContentType = mimeStr
-			}
-		}
 		objWriter := obj.NewWriter(client.Ctx)
 		defer objWriter.Close()
 
 		_, err = io.Copy(objWriter, r)
 		if err == nil {
+
+			if attr, e := obj.Attrs(client.Ctx); attr != nil && e == nil{
+				if mimeStr := mime.TypeByExtension(ext); len(mimeStr) > 0 {
+					attr.ContentType = mimeStr
+				}
+			}
+
 			return objName,nil
 		}else{
 			return "",err
