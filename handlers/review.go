@@ -150,7 +150,7 @@ func handleSubmitReview(resp http.ResponseWriter, req *http.Request){
 		ApplicationId: appId,
 		ReviewerId: userId,
 	}
-	reviewData.CopyToDbReviewResult(&reviewResult)
+	(&reviewResult).CopyFromReviewResponse(reviewData)
 
 	if err := results.Insert(&reviewResult); err != nil {
 		public.LogE.Printf("Error inserting new review result: %s\n", err)

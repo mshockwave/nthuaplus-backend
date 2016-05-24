@@ -17,6 +17,7 @@ const(
 
 	USER_AUTH_SESSION = "user-auth"
 	USER_ID_SESSION_KEY = "user_id"
+	USER_PERMISSION_SESSION_KEY = "user_perm"
 	REVIEWER_AUTH_SESSION = "reviewer-auth"
 	REVIEWER_ID_SESSION_KEY = "reviewer_id"
 	GM_AUTH_SESSION = "gm-auth"
@@ -38,6 +39,7 @@ var(
 	applicationDbSession *mgo.Session
 	miscDbSession *mgo.Session
 	reviewerDbSession *mgo.Session
+	stagingDbSession *mgo.Session
 
 	//Loggers
 	LogV	*log.Logger
@@ -189,6 +191,18 @@ func initDatabases() error {
 		return err
 	}
 
+	//Init staging session
+	stagingDbSession = mainDbSession.Copy()
+	err = stagingDbSession.Login(&mgo.Credential{
+		Username: username,
+		Password: password,
+		Source: "users",
+	})
+	if err != nil {
+		LogE.Println("Staging database login failed: " + err.Error())
+		return err
+	}
+
 	return nil
 }
 func GetNewUserDatabase() *mgo.Database {
@@ -206,6 +220,10 @@ func GetNewMiscDatabase() *mgo.Database {
 func GetNewReviewerDatabase() *mgo.Database {
 	s := reviewerDbSession.Copy()
 	return s.DB("reviewers")
+}
+func GetNewStagingDatabase() *mgo.Database {
+	s := stagingDbSession.Copy()
+	return s.DB("staging")
 }
 
 func initSession(){

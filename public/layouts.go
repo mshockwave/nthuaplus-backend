@@ -1,12 +1,15 @@
 package public
 
-import(
-	"github.com/mshockwave/nthuaplus-backend/db"
-)
+import "time"
 
 type SimpleResult struct {
 	Message	string	""
 	Description	string	""
+}
+
+type BasicUser struct {
+	Name	string
+	Email	string
 }
 
 type UserProfile struct {
@@ -16,23 +19,53 @@ type UserProfile struct {
 	Thumbnail	string ""
 }
 
+type UserPermission uint64
+const(
+	/*
+	Bit mask
+	*/
+	USER_PERMISSION_NORMAL = 0
+	USER_PERMISSION_REVIEW = 1
+	USER_PERMISSION_RECOMM = 2
+	USER_PERMISSION_GM = 4
+)
+func (this UserPermission) ContainsPermission(perm_bit uint64) bool {
+	this_num := uint64(this)
+	return (this_num & perm_bit) != 0
+}
+
+type FileStoragePath string
+
+type TopicId	uint
 type ReviewerProfile struct {
 	Email	string
 	Username	string
 	FormalId	string
 	Thumbnail	string ""
 
-	Topics		[]db.TopicId
+	Topics		[]TopicId
 	Permissions	[]string
 }
 
 type RecommResult  struct {
-	Recommender	db.BasicUser
-	ApplyUser	db.BasicUser
+	Recommender	BasicUser
+	ApplyUser	BasicUser
 	Done		bool
 	Hash		string "" //Only for reviewers and GMs
 }
 
+type RecommView struct {
+	Hash		string
+
+	Recommender	BasicUser
+	ApplyUser	BasicUser
+
+	LastModified	time.Time
+	Content		string
+	Attachment	string
+}
+
+type ReviewScore uint
 type ReviewResponse struct {
 	ResearchArea	int `json:"researchArea"`
 	Classes		int `json:"classes"`
@@ -43,16 +76,4 @@ type ReviewResponse struct {
 	Recomm		int `json:"recomm"`
 	Other		int `json:"other"`
 	Overall		int `json:"overall"`
-}
-func (this ReviewResponse) CopyToDbReviewResult(result *db.ReviewResult){
-
-	result.ResearchArea = db.ReviewScore(this.ResearchArea)
-	result.Classes = db.ReviewScore(this.Classes)
-	result.Skills = db.ReviewScore(this.Skills)
-	result.Grade = db.ReviewScore(this.Grade)
-	result.Language = db.ReviewScore(this.Language)
-	result.ResearchPlan = db.ReviewScore(this.ResearchPlan)
-	result.Recomm = db.ReviewScore(this.Recomm)
-	result.Other = db.ReviewScore(this.Other)
-	result.Overall = db.ReviewScore(this.Overall)
 }

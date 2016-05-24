@@ -134,6 +134,10 @@ func handleRegister(resp http.ResponseWriter, req *http.Request){
 					public.LogE.Printf("Error setting session user id: %s\n", err.Error())
 				}
 
+				if err := public.SetUserSessionValue(req, resp, public.USER_PERMISSION_SESSION_KEY, newUser.Permission); err != nil {
+					public.LogE.Printf("Error setting session user permission: %s\n", err.Error())
+				}
+
 				r := public.SimpleResult{
 					Message: "Register Successed",
 					Description: email,
@@ -187,6 +191,11 @@ func handleLogin(resp http.ResponseWriter, req *http.Request){
 		if err := public.SetUserSessionValue(req, resp, public.USER_ID_SESSION_KEY, user.Id.Hex()); err != nil {
 			public.LogE.Printf("Error setting session user id: %s\n", err.Error())
 		}
+
+		if err := public.SetUserSessionValue(req, resp, public.USER_PERMISSION_SESSION_KEY, user.Permission); err != nil {
+			public.LogE.Printf("Error setting session user permission: %s\n", err.Error())
+		}
+
 		r := public.SimpleResult{
 			Message: "Login Successed",
 			Description: email,
@@ -203,6 +212,11 @@ func handleLogin(resp http.ResponseWriter, req *http.Request){
 }
 
 func handleLogout(resp http.ResponseWriter, req *http.Request){
+
+	if e := public.SetUserSessionValue(req, resp, public.USER_PERMISSION_SESSION_KEY, nil); e != nil {
+		public.LogE.Printf("Error cleaning session user permission: %s\n", e.Error())
+	}
+
 	if err := public.SetUserSessionValue(req, resp, public.USER_ID_SESSION_KEY, nil); err != nil {
 		public.LogE.Printf("Logout Failed: %s\n", err.Error())
 		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{

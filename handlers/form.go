@@ -54,7 +54,7 @@ func handleFormSubmit(resp http.ResponseWriter, req *http.Request){
 		})
 		return
 	}else{
-		form.Topic = db.TopicId(topic)
+		form.Topic = public.TopicId(topic)
 	}
 
 	if grade, err := parseSchoolGrade(req); err != nil{
@@ -190,8 +190,8 @@ func parseStudiedClasses(req *http.Request) ([]db.StudiedClass, error) {
 	decoder.Token() //The last array bracket
 	return classes,nil
 }
-func parseRecommendationLetters(req *http.Request) ([]db.BasicUser, error){
-	var letters []db.BasicUser
+func parseRecommendationLetters(req *http.Request) ([]public.BasicUser, error){
+	var letters []public.BasicUser
 
 	rawJson := req.FormValue("recommendationLetters")
 	if len(rawJson) == 0 {
@@ -203,7 +203,7 @@ func parseRecommendationLetters(req *http.Request) ([]db.BasicUser, error){
 		return letters,errors.New("Wrong json format")
 	}
 
-	element := db.BasicUser{}
+	element := public.BasicUser{}
 	for decoder.More() {
 		if e := decoder.Decode(&element); e != nil {
 			continue
@@ -214,7 +214,7 @@ func parseRecommendationLetters(req *http.Request) ([]db.BasicUser, error){
 	decoder.Token() //The last array bracket
 	return letters,nil
 }
-func handleRecommendationLetters(letters []db.BasicUser, name, email string) []string{
+func handleRecommendationLetters(letters []public.BasicUser, name, email string) []string{
 	var hashList []string
 
 	appDb := public.GetNewApplicationDatabase()
@@ -228,11 +228,11 @@ func handleRecommendationLetters(letters []db.BasicUser, name, email string) []s
 
 			Submitted: false,
 
-			ApplyUser: db.BasicUser{
+			ApplyUser: public.BasicUser{
 				Name: name,
 				Email: email,
 			},
-			Recommender: db.BasicUser{
+			Recommender: public.BasicUser{
 				Name: l.Name,
 				Email: l.Email,
 			},
@@ -388,7 +388,7 @@ type exportApplication struct {
 	Address         string
 
 	//Academic Data
-	Topic           db.TopicId
+	Topic           public.TopicId
 	Teacher         string
 	ResearchArea    string
 	ClassHistories  []db.StudiedClass

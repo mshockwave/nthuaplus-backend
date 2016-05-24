@@ -173,7 +173,7 @@ func getUserRecomms(resp http.ResponseWriter, req *http.Request){
 
 	form := db.ApplicationForm{}
 	var recommList []public.RecommResult
-	topicMap := make(map[db.TopicId]bool)
+	topicMap := make(map[public.TopicId]bool)
 	for it.Next(&form) {
 		if _,exist := topicMap[form.Topic]; exist {
 			//Skip

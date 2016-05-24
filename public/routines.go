@@ -8,7 +8,6 @@ import (
 	"github.com/wendal/errors"
 	"github.com/dchest/uniuri"
 	gomail "gopkg.in/gomail.v2"
-	"github.com/mshockwave/nthuaplus-backend/db"
 	"bytes"
 )
 
@@ -218,6 +217,17 @@ func GetSessionUserId(req *http.Request) (bson.ObjectId, error){
 		}
 	}
 }
+func GetSessionUserPermission(req *http.Request) (UserPermission, error){
+	if v, err := GetUserSessionValue(req, USER_PERMISSION_SESSION_KEY); err != nil || v == nil {
+		return UserPermission(0), errors.New("Invalid session key")
+	}else{
+		if perm, found := v.(UserPermission); found {
+			return perm, nil
+		}else{
+			return UserPermission(0), errors.New("Invalid session permission format")
+		}
+	}
+}
 func GetSessionReviewerId(req *http.Request) (bson.ObjectId, error){
 	if v, err := GetReviewerSessionValue(req, REVIEWER_ID_SESSION_KEY); err != nil || v == nil{
 		return bson.ObjectId(""), errors.New("Invalid session id format")
@@ -321,7 +331,7 @@ func RequestMethodGuard(handler http.HandlerFunc, methods ...string) http.Handle
 	}
 }
 
-func SendMail(to string, applier db.BasicUser, url string) error {
+func SendMail(to string, applier BasicUser, url string) error {
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", "noreply@nthuaplus.org")
 	msg.SetHeader("To", to)
@@ -329,7 +339,7 @@ func SendMail(to string, applier db.BasicUser, url string) error {
 
 	//Write letter template
 	data := struct{
-		ApplyUser db.BasicUser
+		ApplyUser BasicUser
 		RecommUrl string
 	}{
 		ApplyUser: applier,

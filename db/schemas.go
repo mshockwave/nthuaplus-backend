@@ -3,6 +3,7 @@ package db
 import (
 	"gopkg.in/mgo.v2/bson"
 	"time"
+	"github.com/mshockwave/nthuaplus-backend/public"
 )
 
 type User struct {
@@ -10,18 +11,17 @@ type User struct {
 	Email	string
 	Username	string
 	FormalId	string
-	Thumbnail	string ""
+	Thumbnail	string
 
 	AuthInfo	UserAuth
+
+	Permission	public.UserPermission `bson:",omitempty"`
 }
 type UserAuth struct {
 	BcryptCost	int
 	BcyptHash	string
 }
-type BasicUser struct {
-	Name	string
-	Email	string
-}
+
 type GMInfo struct {
 	Id	bson.ObjectId `bson:"_id,omitempty"`
 	UserId	bson.ObjectId
@@ -29,7 +29,6 @@ type GMInfo struct {
 	//TODO: Permissions
 }
 
-type TopicId	uint
 type GradeType float64
 type RankType	int32
 type ApplicationForm struct {
@@ -49,7 +48,7 @@ type ApplicationForm struct {
 	Address         string
 
 			       //Academic Data
-	Topic           TopicId
+	Topic           public.TopicId
 	Teacher         string
 	ResearchArea    string
 	ClassHistories  []StudiedClass
@@ -97,11 +96,22 @@ type Recomm struct {
 
 	Hash		string
 	Submitted	bool
-	ApplyUser	BasicUser
-	Recommender	BasicUser
+	ApplyUser	public.BasicUser
+	Recommender	public.BasicUser
 
 	Content		string ""
 	Attachment	string ""//File
+}
+type RecommEntity struct {
+	Id		bson.ObjectId `bson:"_id,omitempty"`
+	Hash		string `bson:",omitempty"`
+
+	ApplyUser	public.BasicUser
+	Recommender	bson.ObjectId `bson:",omitempty"`
+
+	LastModified	time.Time
+	Content		string `bson:",omitempty"`
+	Attachment	public.FileStoragePath `bson:",omitempty"`
 }
 
 type Reviewer struct {
@@ -109,25 +119,35 @@ type Reviewer struct {
 	BaseProfile	User
 
 	Permissions	[]string
-	Topics		[]TopicId
+	Topics		[]public.TopicId
 }
 
-type ReviewScore uint
 type ReviewResult struct {
 	Id		bson.ObjectId `bson:"_id,omitempty"`
 
-	Topic		TopicId
+	Topic		public.TopicId
 	ApplicationId	bson.ObjectId
 	ReviewerId	bson.ObjectId
 
 	//Score Data
-	ResearchArea	ReviewScore
-	Classes		ReviewScore
-	Skills		ReviewScore
-	Grade		ReviewScore
-	Language	ReviewScore
-	ResearchPlan	ReviewScore
-	Recomm		ReviewScore
-	Other		ReviewScore
-	Overall		ReviewScore
+	ResearchArea	public.ReviewScore
+	Classes		public.ReviewScore
+	Skills		public.ReviewScore
+	Grade		public.ReviewScore
+	Language	public.ReviewScore
+	ResearchPlan	public.ReviewScore
+	Recomm		public.ReviewScore
+	Other		public.ReviewScore
+	Overall		public.ReviewScore
+}
+func (this *ReviewResult) CopyFromReviewResponse(response public.ReviewResponse){
+	this.ResearchArea = public.ReviewScore(response.ResearchArea)
+	this.Classes = public.ReviewScore(response.Classes)
+	this.Skills = public.ReviewScore(response.Skills)
+	this.Grade = public.ReviewScore(response.Grade)
+	this.Language = public.ReviewScore(response.Language)
+	this.ResearchPlan = public.ReviewScore(response.ResearchPlan)
+	this.Recomm = public.ReviewScore(response.Recomm)
+	this.Other = public.ReviewScore(response.Other)
+	this.Overall = public.ReviewScore(response.Overall)
 }
