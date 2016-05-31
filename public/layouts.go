@@ -22,11 +22,13 @@ type UserProfile struct {
 type UserPermission uint64
 const(
 	/*
-	Bit mask
+	Permission Bit mask
 	*/
 	USER_PERMISSION_NORMAL = 0
 	USER_PERMISSION_REVIEW = 1
 	USER_PERMISSION_RECOMM = 2
+
+	/*Admin Permission*/
 	USER_PERMISSION_GM = 4
 )
 func (this UserPermission) ContainsPermission(perm_bit uint64) bool {

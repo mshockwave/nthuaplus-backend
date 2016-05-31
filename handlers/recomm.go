@@ -4,7 +4,7 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"github.com/mshockwave/nthuaplus-backend/public"
-	"github.com/siddontang/go/bson"
+	"gopkg.in/mgo.v2/bson"
 	"github.com/mshockwave/nthuaplus-backend/db"
 	"github.com/mshockwave/nthuaplus-backend/storage"
 	"time"
@@ -122,6 +122,7 @@ func removeStagingRecomm(resp http.ResponseWriter, req *http.Request){
 }
 func viewStagingRecomm(resp http.ResponseWriter, req *http.Request){
 
+	user_perm,_ := public.GetSessionUserPermission(req)
 	user_id,_ := public.GetSessionUserId(req)
 	vars := mux.Vars(req)
 	hash := vars["hash"]
@@ -132,13 +133,18 @@ func viewStagingRecomm(resp http.ResponseWriter, req *http.Request){
 	recomm := stagingDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
 	q := recomm.Find(bson.M{
 		"hash": hash,
-		"recommender": user_id,
 	})
 	recomm_result := db.RecommEntity{}
 	if e := q.One(&recomm_result); e != nil{
 		public.ResponseStatusAsJson(resp, 404, &public.SimpleResult{
 			Message: "No such recomm entry",
 		})
+		return
+	}
+
+	// Permission check
+	if recomm_result.Recommender != user_id && user_perm != public.USER_PERMISSION_GM {
+		public.ResponseStatusAsJson(resp, 403, nil)
 		return
 	}
 
@@ -202,8 +208,170 @@ func handleRecommFileUpload(resp http.ResponseWriter, req *http.Request){
 	}
 }
 
+func handleViewFormalRecomm(resp http.ResponseWriter, req *http.Request){
+	user_id,_ := public.GetSessionUserId(req)
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	recomms := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+	q := recomms.Find(bson.M{
+		"recommender": user_id,
+	})
+	var result []public.RecommView
+	recomm_item := db.RecommEntity{}
+	it := q.Iter()
+	for it.Next(&recomm_item) {
+
+		signed_url := ""
+		if client, err := storage.GetNewStorageClient(); err == nil{
+			expireTime := time.Now().Add(time.Duration(1) * time.Hour) //an hour
+			signed_url,_ = client.GetNewSignedURL(string(recomm_item.Attachment), expireTime)
+		}
+
+		result = append(result, public.RecommView{
+			Hash: recomm_item.Hash,
+			ApplyUser: recomm_item.ApplyUser,
+			LastModified: recomm_item.LastModified,
+			Content: recomm_item.Content,
+			Attachment:signed_url,
+		})
+	}
+
+	public.ResponseOkAsJson(resp, &result)
+}
+
+func handleViewRecomm(resp http.ResponseWriter, req *http.Request){
+	user_id,_ :=  public.GetSessionUserId(req)
+	user_perm,_ := public.GetSessionUserPermission(req)
+
+	vars := mux.Vars(req)
+	hash_str := vars["hash"]
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	recomm := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+	q := recomm.Find(bson.M{
+		"hash": hash_str,
+	})
+
+	recomm_result := db.RecommEntity{}
+	if e := q.One(&recomm_result); e != nil{
+		public.ResponseStatusAsJson(resp, 404, &public.SimpleResult{
+			Message: "No such recomm entity",
+		})
+		return
+	}
+
+	// Permission check
+	if recomm_result.Recommender != user_id && user_perm != public.USER_PERMISSION_GM {
+		public.ResponseStatusAsJson(resp, 403, nil)
+		return
+	}
+
+	signed_url := ""
+	if client, err := storage.GetNewStorageClient(); err == nil{
+		expireTime := time.Now().Add(time.Duration(1) * time.Hour) //an hour
+		signed_url,_ = client.GetNewSignedURL(string(recomm_result.Attachment), expireTime)
+	}
+
+	public.ResponseOkAsJson(resp, &public.RecommView{
+		Hash: recomm_result.Hash,
+		ApplyUser: recomm_result.ApplyUser,
+		LastModified: recomm_result.LastModified,
+		Content: recomm_result.Content,
+		Attachment:signed_url,
+	})
+}
+
+func handleSubmitRecomm(resp http.ResponseWriter, req *http.Request){
+
+	user_id,_ :=  public.GetSessionUserId(req)
+	user_perm,_ := public.GetSessionUserPermission(req)
+
+	vars := mux.Vars(req)
+	hash_str := vars["hash"]
+
+	stagingDb := public.GetNewStagingDatabase()
+	defer stagingDb.Session.Close()
+
+	staging_recomm := stagingDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+
+	q := staging_recomm.Find(bson.M{
+		"hash": hash_str,
+	})
+
+	recomm_result := db.RecommEntity{}
+	if e := q.One(&recomm_result); e != nil{
+		public.ResponseStatusAsJson(resp, 404, &public.SimpleResult{
+			Message: "No such recomm entity",
+		})
+		return
+	}
+
+	// Permission check
+	if recomm_result.Recommender != user_id && user_perm != public.USER_PERMISSION_GM {
+		public.ResponseStatusAsJson(resp, 403, nil)
+		return
+	}
+
+	// Migrate from staging db to application db
+	staging_recomm.RemoveId(recomm_result.Id)
+
+	appDb := public.GetNewApplicationDatabase()
+	defer appDb.Session.Close()
+
+	recomm := appDb.C(public.APPLICATION_DB_RECOMM_COLLECTION)
+	new_recomm := recomm_result
+	new_recomm.Id = bson.NewObjectId()
+	new_recomm.LastModified = time.Now()
+
+	if e := recomm.Insert(new_recomm); e != nil {
+		public.LogE.Printf("Error migrating recomm from staging db to application db: %s\n", e.Error())
+		public.ResponseStatusAsJson(resp, 500, &public.SimpleResult{
+			Message: "Submit failed",
+		})
+	}
+}
+
+func handleInspectRecomm(resp http.ResponseWriter, req *http.Request){
+	user_perm,_ := public.GetSessionUserPermission(req)
+
+	if !user_perm.ContainsPermission(public.USER_PERMISSION_RECOMM) {
+		public.ResponseStatusAsJson(resp, 403, &public.SimpleResult{
+			Message: "Not Recommender",
+		})
+		return
+	}
+
+	switch strings.ToLower(req.Method) {
+
+	case "get":{
+		// View formal recommendation
+		handleViewRecomm(resp, req)
+		break;
+	}
+
+	case "put":
+	case "post":{
+		// Submit as formal recommendation
+		handleSubmitRecomm(resp, req)
+		break;
+	}
+
+	default:
+		public.ResponseStatusAsJson(resp, 404, &public.SimpleResult{
+			Message: "No such http method",
+		})
+
+	}
+}
+
 func ConfigRecommHandler(router *mux.Router){
 	router.HandleFunc("/staging", handleViewStagingRecomms)
 	router.HandleFunc("/staging/{hash}", handleInspectStagingRecomm)
+	router.HandleFunc("/", handleViewFormalRecomm)
+	router.HandleFunc("/{hash}", handleInspectRecomm)
 	router.HandleFunc("/upload", handleRecommFileUpload)
 }
