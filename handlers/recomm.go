@@ -11,6 +11,28 @@ import (
 	"strings"
 )
 
+func handleRecommDoorBell(resp http.ResponseWriter, req *http.Request){
+	_,user_err := public.GetSessionUserId(req)
+
+	if user_err != nil {
+		public.ResponseStatusAsJson(resp, 403, nil)
+		return
+	}
+
+	user_perm,_ := public.GetSessionUserPermission(req)
+
+	if !user_perm.ContainsPermission(public.USER_PERMISSION_RECOMM) {
+		public.ResponseStatusAsJson(resp, 403, &public.SimpleResult{
+			Message: "Not Recommender",
+		})
+		return
+	}
+
+	public.ResponseOkAsJson(resp, &public.SimpleResult{
+		Message: "Ok",
+	})
+}
+
 func handleViewStagingRecomms(resp http.ResponseWriter, req *http.Request){
 	user_id,_ := public.GetSessionUserId(req)
 
@@ -369,6 +391,7 @@ func handleInspectRecomm(resp http.ResponseWriter, req *http.Request){
 }
 
 func ConfigRecommHandler(router *mux.Router){
+	router.HandleFunc("/doorbell", handleRecommDoorBell)
 	router.HandleFunc("/staging", handleViewStagingRecomms)
 	router.HandleFunc("/staging/{hash}", handleInspectStagingRecomm)
 	router.HandleFunc("/", handleViewFormalRecomm)

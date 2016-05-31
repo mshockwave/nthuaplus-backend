@@ -7,6 +7,7 @@ import (
 	"os"
 	"log"
 	"io/ioutil"
+	"encoding/gob"
 	"github.com/gorilla/sessions"
 	"github.com/wendal/errors"
 	"text/template"
@@ -227,6 +228,9 @@ func GetNewStagingDatabase() *mgo.Database {
 }
 
 func initSession(){
+
+	gob.Register(UserPermission(0))
+
 	SessionStorage = sessions.NewCookieStore([]byte(/*NewHashString()*/"main-session-storage"))
 	SessionStorage.MaxAge(86400 * 3) //3 days
 }
