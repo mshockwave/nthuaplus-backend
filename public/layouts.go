@@ -61,6 +61,7 @@ type RecommView struct {
 
 	Recommender	BasicUser
 	ApplyUser	BasicUser
+	Topic		string
 
 	LastModified	time.Time
 	Content		string

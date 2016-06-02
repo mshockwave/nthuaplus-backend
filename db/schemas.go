@@ -107,6 +107,7 @@ type RecommEntity struct {
 	Hash		string `bson:",omitempty"`
 
 	ApplyUser	public.BasicUser
+	Topic		string `bson:",omitempty"`
 	Recommender	bson.ObjectId `bson:",omitempty"`
 
 	LastModified	time.Time

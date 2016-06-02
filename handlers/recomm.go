@@ -57,6 +57,7 @@ func handleViewStagingRecomms(resp http.ResponseWriter, req *http.Request){
 		result = append(result, public.RecommView{
 			Hash: recomm_item.Hash,
 			ApplyUser: recomm_item.ApplyUser,
+			Topic: recomm_item.Topic,
 			LastModified: recomm_item.LastModified,
 			Content: recomm_item.Content,
 			Attachment:signed_url,
@@ -179,6 +180,7 @@ func viewStagingRecomm(resp http.ResponseWriter, req *http.Request){
 	public.ResponseOkAsJson(resp, &public.RecommView{
 		Hash: recomm_result.Hash,
 		ApplyUser: recomm_result.ApplyUser,
+		Topic: recomm_result.Topic,
 		LastModified: recomm_result.LastModified,
 		Content: recomm_result.Content,
 		Attachment:signed_url,
@@ -201,6 +203,8 @@ func handleInspectStagingRecomm(resp http.ResponseWriter, req *http.Request){
 		break
 
 	case "post":
+		editStagingRecomm(resp, req)
+		break;
 	case "put":
 		editStagingRecomm(resp, req)
 		break
@@ -254,6 +258,7 @@ func handleViewFormalRecomm(resp http.ResponseWriter, req *http.Request){
 		result = append(result, public.RecommView{
 			Hash: recomm_item.Hash,
 			ApplyUser: recomm_item.ApplyUser,
+			Topic: recomm_item.Topic,
 			LastModified: recomm_item.LastModified,
 			Content: recomm_item.Content,
 			Attachment:signed_url,
@@ -301,6 +306,7 @@ func handleViewRecomm(resp http.ResponseWriter, req *http.Request){
 	public.ResponseOkAsJson(resp, &public.RecommView{
 		Hash: recomm_result.Hash,
 		ApplyUser: recomm_result.ApplyUser,
+		Topic: recomm_result.Topic,
 		LastModified: recomm_result.LastModified,
 		Content: recomm_result.Content,
 		Attachment:signed_url,
@@ -375,7 +381,11 @@ func handleInspectRecomm(resp http.ResponseWriter, req *http.Request){
 		break;
 	}
 
-	case "put":
+	case "put":{
+		// Submit as formal recommendation
+		handleSubmitRecomm(resp, req)
+		break;
+	}
 	case "post":{
 		// Submit as formal recommendation
 		handleSubmitRecomm(resp, req)
@@ -395,6 +405,6 @@ func ConfigRecommHandler(router *mux.Router){
 	router.HandleFunc("/staging", handleViewStagingRecomms)
 	router.HandleFunc("/staging/{hash}", handleInspectStagingRecomm)
 	router.HandleFunc("/", handleViewFormalRecomm)
+	router.HandleFunc("/a/upload", handleRecommFileUpload)
 	router.HandleFunc("/{hash}", handleInspectRecomm)
-	router.HandleFunc("/upload", handleRecommFileUpload)
 }
