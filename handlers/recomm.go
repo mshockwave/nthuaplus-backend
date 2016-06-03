@@ -405,6 +405,11 @@ func ConfigRecommHandler(router *mux.Router){
 	router.HandleFunc("/staging", handleViewStagingRecomms)
 	router.HandleFunc("/staging/{hash}", handleInspectStagingRecomm)
 	router.HandleFunc("/", handleViewFormalRecomm)
+	/*
+	 Upload handler must either place before /{hash}
+	 Or add another path prefix rather than just /upload
+	 For the sake of preventing ambiguous
+	*/
 	router.HandleFunc("/a/upload", handleRecommFileUpload)
 	router.HandleFunc("/{hash}", handleInspectRecomm)
 }
